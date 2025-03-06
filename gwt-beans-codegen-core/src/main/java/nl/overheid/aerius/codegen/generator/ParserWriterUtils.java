@@ -106,16 +106,11 @@ public final class ParserWriterUtils {
         .indent("  ")
         .build();
 
-    String content = javaFile.toString();
-    content = content.replace(
-        "nl.aerius.wui.service.json.JSONObjectHandle",
-        "nl.overheid.aerius.codegen.test.json.JSONObjectHandle");
-
     final Path outputPath = Paths.get(outputDir, className + ".java");
     System.out.println("Writing parser to: " + outputPath.toAbsolutePath());
 
     Files.createDirectories(Paths.get(outputDir));
-    Files.writeString(outputPath, content);
+    Files.writeString(outputPath, javaFile.toString());
   }
 
   /**

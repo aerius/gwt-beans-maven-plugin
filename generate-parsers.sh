@@ -16,6 +16,9 @@ print_usage() {
     exit 1
 }
 
+echo "Debug: Script started"
+echo "Debug: Script directory is $SCRIPT_DIR"
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -64,17 +67,39 @@ PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
 # Get the directory where this script is located
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
+echo "Debug: Building in directory: $SCRIPT_DIR/gwt-beans-codegen-core"
+echo "Debug: Checking if directory exists..."
+if [[ ! -d "$SCRIPT_DIR/gwt-beans-codegen-core" ]]; then
+    echo "Error: Build directory does not exist: $SCRIPT_DIR/gwt-beans-codegen-core"
+    exit 1
+fi
+
+echo "Debug: Checking for pom.xml..."
+if [[ ! -f "$SCRIPT_DIR/gwt-beans-codegen-core/pom.xml" ]]; then
+    echo "Error: pom.xml not found in build directory"
+    exit 1
+fi
+
 echo "Building GWT Bean Parser Generator..."
-(cd "$SCRIPT_DIR/gwt-beans-codegen-core" && mvn clean package -DskipTests)
+(cd "$SCRIPT_DIR/gwt-beans-codegen-core" && mvn clean -q package -DskipTests)
+
+echo "Debug: Checking if JAR was built..."
+if [[ ! -f "$SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar" ]]; then
+    echo "Error: Build failed - JAR file not found"
+    exit 1
+fi
 
 echo "Building target project to ensure classes are available..."
-(cd "$PROJECT_DIR" && mvn clean compile)
+(cd "$PROJECT_DIR" && mvn clean -q compile)
 
 echo "Getting dependency classpath from target project..."
 # Get both the project's classes and its dependencies
 TARGET_CP="$PROJECT_DIR/target/classes"
 DEP_CP=$(cd "$PROJECT_DIR" && mvn dependency:build-classpath -q -DincludeScope=compile -Dmdep.outputFile=/dev/stdout)
 FULL_CP="$TARGET_CP:$DEP_CP"
+
+echo "Debug: Using classpath: $FULL_CP"
+echo "Debug: Using JAR: $SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar"
 
 # Prepare generator arguments
 GENERATOR_ARGS=(
@@ -88,6 +113,7 @@ if [[ -n "$CUSTOM_PARSER_DIR" ]]; then
 fi
 
 echo "Running GWT Bean Parser Generator..."
+echo "Debug: Running with arguments: ${GENERATOR_ARGS[@]}"
 java -cp "$FULL_CP:$SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar" nl.overheid.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
 
 echo "Parser generation completed successfully!" 

@@ -9,7 +9,7 @@ import com.palantir.javapoet.ClassName;
  * Common utilities for parser generation.
  */
 public final class ParserCommonUtils {
-  // JSON handling constants
+  // JSON handling constants - Always use the AERIUS JSONObjectHandle
   private static final ClassName JSON_OBJECT_HANDLE = ClassName.get("nl.aerius.wui.service.json", "JSONObjectHandle");
 
   // Java standard types
@@ -23,6 +23,7 @@ public final class ParserCommonUtils {
    * Gets the JSON object handle class.
    */
   public static ClassName getJSONObjectHandle() {
+    // Always return the AERIUS JSONObjectHandle
     return JSON_OBJECT_HANDLE;
   }
 

@@ -124,7 +124,13 @@ public class TypeAnalyzer {
       return; // Already processed
     }
 
-    addTypeForGeneration(type);
+    // If this type has a custom parser, skip adding it for generation
+    // but continue analyzing its fields and subtypes
+    if (!hasCustomParser(type)) {
+      addTypeForGeneration(type);
+    } else {
+      System.out.println("Skipping parser generation for " + type.getName() + " (has custom parser)");
+    }
 
     // Find and process subtypes
     try (ScanResult scanResult = new ClassGraph()
@@ -135,7 +141,8 @@ public class TypeAnalyzer {
       subtypes.forEach(this::analyzeTypeAndSubtypes);
     }
 
-    // Analyze all fields of this type
+    // Always analyze fields, even for types with custom parsers
+    // This ensures we discover all types that might need parsers
     for (Field field : type.getDeclaredFields()) {
       if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
         try {
@@ -209,8 +216,7 @@ public class TypeAnalyzer {
     }
     return !type.isPrimitive()
         && !primitiveWrappers.contains(type)
-        && !type.getName().startsWith("java.")
-        && !customParserTypes.contains(type.getSimpleName());
+        && !type.getName().startsWith("java.");
   }
 
   private void addTypeForGeneration(final Class<?> type) {
@@ -231,6 +237,14 @@ public class TypeAnalyzer {
       final String className = type.getSimpleName();
       discoveredTypes.add(ClassName.get(packageName, className));
     }
+  }
+
+  private boolean hasCustomParser(final Class<?> type) {
+    boolean hasParser = customParserTypes.contains(type.getSimpleName());
+    if (hasParser) {
+      System.out.println("Found custom parser for type: " + type.getName());
+    }
+    return hasParser;
   }
 
   private void printTypeHierarchy(Class<?> type, String indent, Set<Class<?>> visited) {

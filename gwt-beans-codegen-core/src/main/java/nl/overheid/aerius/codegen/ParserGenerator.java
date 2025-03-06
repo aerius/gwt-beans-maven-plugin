@@ -24,10 +24,25 @@ public class ParserGenerator {
   public static void main(String[] args) {
     System.out.println("\n=== GWT Bean Parser Generator ===");
 
+    System.out.println("\nStep 0: Command line arguments");
+    System.out.println("Arguments received:");
+    for (int i = 0; i < args.length; i++) {
+      System.out.println("  " + i + ": " + args[i]);
+    }
+    System.out.println();
+
     CommandLineOptions options = parseCommandLineArguments(args);
     if (options == null) {
       return; // Help was displayed or invalid arguments
     }
+
+    System.out.println("\nStep 0: Interpreted arguments");
+    System.out.println("  Root class: " + options.rootClassName);
+    System.out.println("  Output directory: " + options.outputDir);
+    System.out.println("  Parser package: " + options.parserPackage);
+    System.out.println(
+        "  Custom parser directory: " + (options.customParserDir != null ? options.customParserDir : "not specified"));
+    System.out.println();
 
     try {
       generateParsers(options.rootClassName, options.outputDir, options.parserPackage, options.customParserDir);
@@ -118,17 +133,29 @@ public class ParserGenerator {
     // Load the root class
     final Class<?> rootClass = Class.forName(rootClassName);
 
+    // Find custom parsers first (if a custom parser directory is provided)
+    final Set<String> customParserTypes = new HashSet<>();
+    if (customParserDir != null && !customParserDir.isEmpty()) {
+      System.out.println("\nStep 1: Discovering custom parsers");
+      customParserTypes.addAll(findCustomParsers(customParserDir));
+      if (customParserTypes.isEmpty()) {
+        System.out.println("No custom parsers found in: " + customParserDir);
+      }
+    }
+
     // Validate if needed
-    validateConfiguration(rootClass);
+    System.out.println("\nStep 2: Validating " + rootClass.getName());
+    validateConfiguration(rootClass, customParserTypes);
 
     // Generate parsers
-    System.out.println("\nStep 2: Generating Parsers");
+    System.out.println("\nStep 3: Generating Parsers");
     generateParsersForClass(rootClass, parserPackage, outputDir, customParserDir);
   }
 
-  private static void validateConfiguration(Class<?> rootClass) {
-    System.out.println("\nStep 1: Validating " + rootClass.getName());
+  private static void validateConfiguration(Class<?> rootClass, Set<String> customParserTypes) {
+    System.out.println("=== Starting validation of " + rootClass.getName() + " ===");
     final ConfigurationValidator validator = new ConfigurationValidator();
+    validator.setCustomParserTypes(customParserTypes);
     if (!validator.validate(rootClass)) {
       throw new IllegalStateException(
           rootClass.getName() + " validation failed. Please fix the issues before generating parsers.");

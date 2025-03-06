@@ -30,26 +30,50 @@ public class ConfigurationValidator {
   private static final String GREEN_CHECK = "✅";
   private static final String RED_CROSS = "❌";
 
+  private final Set<Class<?>> processedTypes = new HashSet<>();
   private final Set<String> customParserTypes = new HashSet<>();
   private final TypeAnalyzer typeAnalyzer = new TypeAnalyzer();
   private final Set<Class<?>> validatedClasses = new HashSet<>();
   private boolean hasErrors = false;
 
-  public boolean validate(final Class<?> rootClass) {
-    System.out.println("=== Starting validation of " + rootClass.getName() + " ===");
-    customParserTypes.clear();
+  public void setCustomParserTypes(Set<String> customParserTypes) {
+    this.customParserTypes.clear();
+    if (customParserTypes != null) {
+      this.customParserTypes.addAll(customParserTypes);
+    }
+  }
+
+  private boolean hasCustomParser(Class<?> type) {
+    return customParserTypes.contains(type.getSimpleName());
+  }
+
+  public boolean validate(Class<?> type) {
+    if (type == null) {
+      return true;
+    }
+
+    if (hasCustomParser(type)) {
+      System.out.println("Skipping validation for " + type.getName() + " (has custom parser)");
+      return true;
+    }
+
+    if (!processedTypes.add(type)) {
+      return true; // Already processed
+    }
+
+    System.out.println("=== Starting validation of " + type.getName() + " ===");
     validatedClasses.clear();
     hasErrors = false;
     findCustomParsers();
 
     // Use TypeAnalyzer to discover all types that need validation
-    final Set<ClassName> types = typeAnalyzer.analyzeClass(rootClass.getName());
-    for (ClassName type : types) {
+    final Set<ClassName> types = typeAnalyzer.analyzeClass(type.getName());
+    for (ClassName typeName : types) {
       try {
         // Skip primitive array types
-        if (type.packageName().isEmpty()) {
+        if (typeName.packageName().isEmpty()) {
           // Extract base type by removing all array brackets
-          final String baseTypeName = type.simpleName().replaceAll("\\[+\\]", "");
+          final String baseTypeName = typeName.simpleName().replaceAll("\\[+\\]", "");
           // Skip if it's a primitive type
           if (baseTypeName.equals("double") ||
               baseTypeName.equals("int") ||
@@ -62,16 +86,17 @@ public class ConfigurationValidator {
             continue;
           }
         }
-        final Class<?> clazz = Class.forName(type.packageName() + "." + type.simpleName().replace("_", "$"));
+        final Class<?> clazz = Class.forName(typeName.packageName() + "." + typeName.simpleName().replace("_", "$"));
         validateClass(clazz);
       } catch (ClassNotFoundException e) {
-        System.out.println(RED_CROSS + " Could not find class: " + type.packageName() + "." + type.simpleName());
+        System.out
+            .println(RED_CROSS + " Could not find class: " + typeName.packageName() + "." + typeName.simpleName());
         hasErrors = true;
       }
     }
 
     if (!hasErrors) {
-      System.out.println(GREEN_CHECK + " " + rootClass.getName() + ": All validation checks passed");
+      System.out.println(GREEN_CHECK + " " + type.getName() + ": All validation checks passed");
     }
     return !hasErrors;
   }
@@ -94,10 +119,6 @@ public class ConfigurationValidator {
     } catch (IOException e) {
       System.out.println("Warning: Could not scan for custom parsers: " + e.getMessage());
     }
-  }
-
-  private boolean hasCustomParser(final Class<?> clazz) {
-    return customParserTypes.contains(clazz.getSimpleName());
   }
 
   private void validateClass(final Class<?> clazz) {
