@@ -10,9 +10,9 @@
       <version>2024.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>aerius-calculator-codegen</artifactId>
-    <name>AERIUS Calculator Code Generator</name>
-    <description>Code generation tools for AERIUS Calculator</description>
+    <artifactId>gwt-beans-codegen-core</artifactId>
+    <name>GWT Bean Parser Generator Core</name>
+    <description>Code generation tools for GWT Bean Parser Generator</description>
 
     <dependencies>
         <!-- Code generation -->

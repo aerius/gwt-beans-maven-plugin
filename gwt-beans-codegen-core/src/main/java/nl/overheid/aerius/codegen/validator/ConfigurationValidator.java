@@ -24,7 +24,7 @@ import nl.overheid.aerius.codegen.analyzer.TypeAnalyzer;
 import nl.overheid.aerius.codegen.util.FileUtils;
 
 public class ConfigurationValidator {
-  private static final String PARSER_PACKAGE = "nl.overheid.aerius.wui.application.init.parsers";
+  private static final String PARSER_PACKAGE = "generated.parsers";
   private static final String CUSTOM_SUBDIR = "custom";
   private static final String WUI_CLIENT_OUTPUT_DIR = FileUtils.getWuiClientOutputDir();
   private static final String GREEN_CHECK = "✅";

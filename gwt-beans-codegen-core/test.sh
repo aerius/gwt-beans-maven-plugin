@@ -7,7 +7,7 @@ mkdir -p test-logs
 LOG_FILE="test-logs/step0-all-tests.log"
 
 {
-  echo "=== AERIUS Parser Generator Test Suite ==="
+  echo "=== GWT Bean Parser Generator Test Suite ==="
   echo "Running all tests in sequence to validate the parser generator."
   echo "Full output will be written to: $LOG_FILE"
   echo ""

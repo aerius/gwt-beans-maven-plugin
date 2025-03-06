@@ -40,6 +40,7 @@ public class TypeAnalyzer {
   private final Set<String> skippedTypes;
   private final Set<ClassName> discoveredTypes;
   private final Set<String> printedTypes = new HashSet<>();
+  private final Set<String> customParserTypes = new HashSet<>();
 
   public TypeAnalyzer() {
     primitiveWrappers = new HashSet<>();
@@ -75,6 +76,19 @@ public class TypeAnalyzer {
     processedTypes = new HashSet<>();
     skippedTypes = new HashSet<>();
     discoveredTypes = new TreeSet<>(Comparator.comparing(ClassName::toString));
+  }
+
+  /**
+   * Sets the list of types that have custom parsers.
+   * These types will be skipped during analysis.
+   *
+   * @param customParserTypes The set of type names that have custom parsers
+   */
+  public void setCustomParserTypes(Set<String> customParserTypes) {
+    this.customParserTypes.clear();
+    if (customParserTypes != null) {
+      this.customParserTypes.addAll(customParserTypes);
+    }
   }
 
   public Set<ClassName> analyzeClass(final String className) {
@@ -195,12 +209,13 @@ public class TypeAnalyzer {
     }
     return !type.isPrimitive()
         && !primitiveWrappers.contains(type)
-        && !type.getName().startsWith("java.");
+        && !type.getName().startsWith("java.")
+        && !customParserTypes.contains(type.getSimpleName());
   }
 
   private void addTypeForGeneration(final Class<?> type) {
-    // Don't generate parsers for enums
-    if (type.isEnum()) {
+    // Don't generate parsers for enums or types with custom parsers
+    if (type.isEnum() || customParserTypes.contains(type.getSimpleName())) {
       return;
     }
 
@@ -232,16 +247,18 @@ public class TypeAnalyzer {
     // If we've seen this type before, mark it with (skipped), unless it's an enum
     final boolean alreadyVisited = !visited.add(type);
     final boolean isEnum = type.isEnum();
+    final boolean hasCustomParser = customParserTypes.contains(type.getSimpleName());
     final boolean isRoot = indent.isEmpty();
 
     if (isRoot) {
-      System.out.println(type.getSimpleName() + (isEnum ? " (enum)" : ""));
+      System.out.println(type.getSimpleName() +
+          (isEnum ? " (enum)" : hasCustomParser ? " (custom parser)" : ""));
     } else {
       System.out.println(indent + "├── " + type.getSimpleName() +
-          (isEnum ? " (enum)" : alreadyVisited ? " (skipped)" : ""));
+          (isEnum ? " (enum)" : hasCustomParser ? " (custom parser)" : alreadyVisited ? " (skipped)" : ""));
     }
 
-    if (!alreadyVisited && !isEnum) {
+    if (!alreadyVisited && !isEnum && !hasCustomParser) {
       final String fieldIndent = isRoot ? "" : indent + "│   ";
 
       // Print fields
@@ -274,7 +291,8 @@ public class TypeAnalyzer {
             if (!fieldType.getName().startsWith("java.") && !fieldType.isPrimitive()
                 && !primitiveWrappers.contains(fieldType)
                 && !(fieldType.isArray() && fieldType.getComponentType().isPrimitive())
-                && !fieldType.isEnum()) {
+                && !fieldType.isEnum()
+                && !customParserTypes.contains(fieldType.getSimpleName())) {
               printTypeHierarchy(fieldType, fieldIndent + "│   ", visited);
             }
           }
@@ -302,7 +320,15 @@ public class TypeAnalyzer {
     if (type instanceof Class) {
       final Class<?> clazz = (Class<?>) type;
       // Only append (enum) for direct enum types, not for enums in generic types
-      return clazz.getSimpleName() + (clazz.isEnum() && !isFieldDeclaration ? " (enum)" : "");
+      String suffix = "";
+      if (!isFieldDeclaration) {
+        if (clazz.isEnum()) {
+          suffix = " (enum)";
+        } else if (customParserTypes.contains(clazz.getSimpleName())) {
+          suffix = " (custom parser)";
+        }
+      }
+      return clazz.getSimpleName() + suffix;
     } else if (type instanceof ParameterizedType) {
       final ParameterizedType paramType = (ParameterizedType) type;
       final StringBuilder sb = new StringBuilder();

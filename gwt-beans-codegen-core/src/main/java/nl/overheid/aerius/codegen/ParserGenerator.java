@@ -13,7 +13,6 @@ import com.palantir.javapoet.ClassName;
 import nl.overheid.aerius.codegen.analyzer.TypeAnalyzer;
 import nl.overheid.aerius.codegen.generator.ParserWriter;
 import nl.overheid.aerius.codegen.generator.ParserWriterUtils;
-import nl.overheid.aerius.codegen.util.FileUtils;
 import nl.overheid.aerius.codegen.validator.ConfigurationValidator;
 
 /**
@@ -23,7 +22,7 @@ import nl.overheid.aerius.codegen.validator.ConfigurationValidator;
  */
 public class ParserGenerator {
   public static void main(String[] args) {
-    System.out.println("\n=== AERIUS Parser Generator ===");
+    System.out.println("\n=== GWT Bean Parser Generator ===");
 
     CommandLineOptions options = parseCommandLineArguments(args);
     if (options == null) {
@@ -160,17 +159,12 @@ public class ParserGenerator {
 
       // Analyze the class to find all types that need parsers
       final TypeAnalyzer analyzer = new TypeAnalyzer();
+      analyzer.setCustomParserTypes(customParserTypes);
       final Set<ClassName> classNames = analyzer.analyzeClass(targetClass.getName());
 
-      // Filter out types that have custom parsers
-      final Set<ClassName> filteredClassNames = new HashSet<>();
-      for (ClassName className : classNames) {
-        if (!customParserTypes.contains(className.simpleName())) {
-          filteredClassNames.add(className);
-        } else {
-          System.out.println("Using custom parser for: " + className.simpleName());
-        }
-      }
+      // Filter out types that have custom parsers (this is now redundant since
+      // TypeAnalyzer handles it)
+      final Set<ClassName> filteredClassNames = new HashSet<>(classNames);
 
       // Clean up the output directory
       clearOutputDirectory(outputDir);
@@ -179,7 +173,7 @@ public class ParserGenerator {
       final ParserWriter parserWriter = new ParserWriter(outputDir, parserPackage, timestamp);
       parserWriter.generateParsers(filteredClassNames);
 
-      System.out.println("Successfully generated parsers for " + targetClass.getName());
+      System.out.println("\nParser generation completed successfully!");
     } catch (nl.overheid.aerius.codegen.analyzer.UnsupportedTypeException e) {
       System.err.println("\n❌ Error: " + e.getMessage());
       System.err.println(
