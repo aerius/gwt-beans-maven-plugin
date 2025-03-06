@@ -92,78 +92,65 @@ public abstract class ParserGeneratorTestBase {
     final String normalizedExpected = normalizeContent(expectedContent);
 
     if (!normalizedExpected.equals(normalizedActual)) {
-      // Find the first point of difference
-      int diffIndex = findFirstDifferenceIndex(normalizedExpected, normalizedActual);
+      // Split into lines for comparison
+      List<String> expectedLines = List.of(normalizedExpected.split("\n"));
+      List<String> actualLines = List.of(normalizedActual.split("\n"));
 
-      // Extract 3 lines before and after the difference
-      String[] expectedLines = normalizedExpected.split("\n");
-      String[] actualLines = normalizedActual.split("\n");
+      // Compare from the bottom up
+      int expectedSize = expectedLines.size();
+      int actualSize = actualLines.size();
+      int minSize = Math.min(expectedSize, actualSize);
 
-      // Find the line number where the difference occurs
-      int diffLine = 0;
-      int currentPos = 0;
-      for (String line : expectedLines) {
-        if (currentPos + line.length() >= diffIndex) {
+      // Find first difference from bottom
+      int diffFromBottom = -1;
+      for (int i = 1; i <= minSize; i++) {
+        String expected = expectedLines.get(expectedSize - i);
+        String actual = actualLines.get(actualSize - i);
+        if (!expected.equals(actual)) {
+          diffFromBottom = i;
           break;
         }
-        currentPos += line.length() + 1; // +1 for the newline
-        diffLine++;
       }
 
-      // Get context lines
-      int startLine = Math.max(0, diffLine - 3);
-      int endLine = Math.min(Math.min(expectedLines.length, actualLines.length), diffLine + 4);
+      // Build error message
+      StringBuilder message = new StringBuilder();
+      message.append(String.format("Generated parser content doesn't match expected for %s.\n", className));
 
-      StringBuilder expectedContext = new StringBuilder();
-      StringBuilder actualContext = new StringBuilder();
+      if (diffFromBottom == -1) {
+        message.append(String.format("Files have different lengths. Expected %d lines but got %d lines.\n",
+            expectedSize, actualSize));
+      } else {
+        message.append(String.format("First difference found at line %d from bottom:\n\n", diffFromBottom));
 
-      for (int i = startLine; i < endLine; i++) {
-        if (i == diffLine) {
-          expectedContext.append(">>> "); // Highlight the difference line
-          actualContext.append(">>> ");
-        } else {
-          expectedContext.append("    ");
-          actualContext.append("    ");
+        // Calculate the lines to show
+        int diffLineExpected = expectedSize - diffFromBottom;
+        int diffLineActual = actualSize - diffFromBottom;
+
+        // Show 3 lines before and after the difference
+        int contextBefore = 3;
+        int contextAfter = 3;
+
+        message.append("Expected content:\n");
+        message.append("---------------\n");
+        for (int i = Math.max(0, diffLineExpected - contextBefore); i <= Math.min(expectedSize - 1,
+            diffLineExpected + contextAfter); i++) {
+          String lineNum = String.format("%4d", i + 1);
+          String marker = (i == diffLineExpected) ? " >>> " : "     ";
+          message.append(lineNum).append(marker).append(expectedLines.get(i)).append('\n');
         }
-        expectedContext.append(i < expectedLines.length ? expectedLines[i] : "").append("\n");
-        actualContext.append(i < actualLines.length ? actualLines[i] : "").append("\n");
+
+        message.append("\nActual content:\n");
+        message.append("-------------\n");
+        for (int i = Math.max(0, diffLineActual - contextBefore); i <= Math.min(actualSize - 1,
+            diffLineActual + contextAfter); i++) {
+          String lineNum = String.format("%4d", i + 1);
+          String marker = (i == diffLineActual) ? " >>> " : "     ";
+          message.append(lineNum).append(marker).append(actualLines.get(i)).append('\n');
+        }
       }
 
-      // Create a detailed error message
-      String errorMessage = String.format(
-          "Generated parser content doesn't match expected for %s.\n" +
-              "Difference at line %d:\n\n" +
-              "Expected:\n%s\n" +
-              "Actual:\n%s\n",
-          className, diffLine + 1, expectedContext, actualContext);
-
-      Assertions.fail(errorMessage);
+      Assertions.fail(message.toString());
     }
-  }
-
-  /**
-   * Finds the index of the first character that differs between two strings.
-   * 
-   * @param expected The expected string
-   * @param actual   The actual string
-   * @return The index of the first difference, or -1 if the strings are identical
-   */
-  private int findFirstDifferenceIndex(String expected, String actual) {
-    int minLength = Math.min(expected.length(), actual.length());
-
-    for (int i = 0; i < minLength; i++) {
-      if (expected.charAt(i) != actual.charAt(i)) {
-        return i;
-      }
-    }
-
-    // If we get here, one string might be a prefix of the other
-    if (expected.length() != actual.length()) {
-      return minLength;
-    }
-
-    // Strings are identical
-    return -1;
   }
 
   protected String getExpectedParserContent(final String className) throws IOException {
@@ -174,72 +161,59 @@ public abstract class ParserGeneratorTestBase {
   }
 
   private String normalizeContent(String content) {
-    String result = content;
+    List<String> lines = new ArrayList<>();
+    List<String> imports = new ArrayList<>();
 
-    // Remove all indentation (spaces/tabs at start of lines)
-    result = result.replaceAll("(?m)^[ \\t]+", "");
+    // Split content into lines, normalize line endings
+    String[] rawLines = content.replaceAll("\r\n", "\n").split("\n");
 
-    // Remove all empty lines (lines with only whitespace)
-    result = result.replaceAll("(?m)^\\s*$\\n", "");
+    // Process each line
+    boolean inGeneratedAnnotation = false;
+    for (String line : rawLines) {
+      // Trim the line
+      line = line.trim();
+      if (line.isEmpty()) {
+        continue;
+      }
 
-    // Normalize whitespace within lines (collapse multiple spaces to single space)
-    result = result.replaceAll("[ \\t]+", " ");
+      // Handle @Generated annotation blocks
+      if (line.contains("@Generated")) {
+        inGeneratedAnnotation = true;
+        // If it's a single-line annotation (contains both @Generated and closing
+        // parenthesis)
+        if (line.contains(")")) {
+          inGeneratedAnnotation = false;
+        }
+        continue;
+      }
+      if (inGeneratedAnnotation) {
+        if (line.contains(")")) {
+          inGeneratedAnnotation = false;
+        }
+        continue;
+      }
 
-    // Trim trailing whitespace at the end of each line
-    result = result.replaceAll("(?m)[ \\t]+$", "");
-
-    // Remove @Generated annotation completely since it contains a timestamp
-    result = result.replaceAll("@Generated[^;]+;", "");
-
-    // Ensure consistent line endings and remove trailing newlines
-    result = result.replaceAll("\r\n", "\n");
-    result = result.trim();
-
-    // Sort imports within each group
-    String[] lines = result.split("\n");
-    StringBuilder sb = new StringBuilder();
-    List<String> javaUtilImports = new ArrayList<>();
-    List<String> javaxImports = new ArrayList<>();
-    List<String> nlImports = new ArrayList<>();
-    boolean inImports = false;
-
-    for (String line : lines) {
+      // Collect imports separately
       if (line.startsWith("import ")) {
-        inImports = true;
-        if (line.startsWith("import java.util.")) {
-          javaUtilImports.add(line);
-        } else if (line.startsWith("import javax.")) {
-          javaxImports.add(line);
-        } else if (line.startsWith("import nl.")) {
-          nlImports.add(line);
-        } else {
-          sb.append(line).append("\n");
-        }
+        imports.add(line);
       } else {
-        if (inImports) {
-          // Add sorted imports
-          Collections.sort(javaUtilImports);
-          Collections.sort(javaxImports);
-          Collections.sort(nlImports);
-
-          if (!javaUtilImports.isEmpty()) {
-            javaUtilImports.forEach(imp -> sb.append(imp).append("\n"));
-            sb.append("\n");
-          }
-          if (!javaxImports.isEmpty()) {
-            javaxImports.forEach(imp -> sb.append(imp).append("\n"));
-            sb.append("\n");
-          }
-          if (!nlImports.isEmpty()) {
-            nlImports.forEach(imp -> sb.append(imp).append("\n"));
-            sb.append("\n");
-          }
-          inImports = false;
+        // For non-imports, add any collected imports first (sorted)
+        if (!imports.isEmpty()) {
+          Collections.sort(imports);
+          lines.addAll(imports);
+          imports.clear();
         }
-        sb.append(line).append("\n");
+        lines.add(line);
       }
     }
 
-    return sb.toString().trim();
+    // Add any remaining imports at the end
+    if (!imports.isEmpty()) {
+      Collections.sort(imports);
+      lines.addAll(imports);
+    }
+
+    // Join lines back together
+    return String.join("\n", lines);
   }
 }

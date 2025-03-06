@@ -1,7 +1,6 @@
 package nl.overheid.aerius.codegen.test.generated;
 
 import java.util.LinkedHashMap;
-import java.util.HashMap;
 
 import javax.annotation.processing.Generated;
 
@@ -47,7 +46,9 @@ public class TestComplexCollectionTypeParser {
     if (obj.has("integerMap") && !obj.isNull("integerMap")) {
       final JSONObjectHandle mapObj = obj.getObject("integerMap");
       final LinkedHashMap<String, Integer> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> map.put(key, mapObj.getInteger(key)));
+      mapObj.keySet().forEach(key -> {
+        map.put(key, mapObj.getInteger(key));
+      });
       config.setIntegerMap(map);
     }
 
@@ -55,7 +56,9 @@ public class TestComplexCollectionTypeParser {
     if (obj.has("doubleMap") && !obj.isNull("doubleMap")) {
       final JSONObjectHandle mapObj = obj.getObject("doubleMap");
       final LinkedHashMap<String, Double> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> map.put(key, mapObj.getNumber(key)));
+      mapObj.keySet().forEach(key -> {
+        map.put(key, mapObj.getNumber(key));
+      });
       config.setDoubleMap(map);
     }
 

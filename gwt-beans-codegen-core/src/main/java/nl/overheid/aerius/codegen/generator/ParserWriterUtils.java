@@ -229,6 +229,7 @@ public final class ParserWriterUtils {
       if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())
           && !java.lang.reflect.Modifier.isTransient(field.getModifiers())
           && !field.isSynthetic()) {
+        methodBuilder.addCode("\n");
         methodBuilder.addComment("Parse $L", field.getName());
         methodBuilder.addCode(generateFieldParsingCode(field, "obj", parserPackage));
       }
