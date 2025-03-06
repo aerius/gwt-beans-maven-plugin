@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 
 import javax.annotation.processing.Generated;
 
-import nl.overheid.aerius.codegen.test.json.JSONObjectHandle;
+import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.overheid.aerius.codegen.test.types.TestSimpleCollectionType;
 
 @Generated(value = "nl.overheid.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")

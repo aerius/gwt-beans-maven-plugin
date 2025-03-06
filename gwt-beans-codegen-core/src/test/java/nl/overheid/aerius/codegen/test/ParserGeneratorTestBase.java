@@ -70,6 +70,25 @@ public abstract class ParserGeneratorTestBase {
         TEST_TIMESTAMP);
   }
 
+  protected void replaceJsonObjectHandleImports() throws IOException {
+    if (Files.exists(outputDir)) {
+      Files.walk(outputDir)
+          .filter(Files::isRegularFile)
+          .filter(path -> path.toString().endsWith(".java"))
+          .forEach(path -> {
+            try {
+              String content = Files.readString(path);
+              content = content.replace(
+                  "import nl.aerius.wui.service.json.JSONObjectHandle;",
+                  "import nl.aerius.wui.service.json.JSONObjectHandle;");
+              Files.writeString(path, content);
+            } catch (IOException e) {
+              throw new RuntimeException("Failed to process file: " + path, e);
+            }
+          });
+    }
+  }
+
   /**
    * Gets the directory containing custom parsers.
    * 

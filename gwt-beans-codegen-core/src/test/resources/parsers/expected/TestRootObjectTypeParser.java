@@ -1,7 +1,7 @@
 package nl.overheid.aerius.codegen.test.generated;
 
 import javax.annotation.processing.Generated;
-import nl.overheid.aerius.codegen.test.json.JSONObjectHandle;
+import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.overheid.aerius.codegen.test.types.TestRootObjectType;
 import nl.overheid.aerius.codegen.test.custom.TestCustomParserTypeParser;
 

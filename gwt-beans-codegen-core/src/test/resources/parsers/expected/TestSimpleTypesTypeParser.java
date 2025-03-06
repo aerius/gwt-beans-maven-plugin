@@ -2,7 +2,7 @@ package nl.overheid.aerius.codegen.test.generated;
 
 import javax.annotation.processing.Generated;
 
-import nl.overheid.aerius.codegen.test.json.JSONObjectHandle;
+import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.overheid.aerius.codegen.test.types.TestSimpleTypesType;
 
 @Generated(value = "nl.overheid.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")

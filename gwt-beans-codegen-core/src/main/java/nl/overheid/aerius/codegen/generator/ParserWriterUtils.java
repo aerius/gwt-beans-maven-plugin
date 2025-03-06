@@ -30,9 +30,6 @@ import nl.overheid.aerius.codegen.generator.parser.SimpleFieldParser;
  * Utility class containing shared code for parser generation.
  */
 public final class ParserWriterUtils {
-  // Collection types
-  private static final ClassName LIST = ClassName.get("java.util", "List");
-
   // Track custom parser imports
   private static final Map<String, String> customParserImports = new HashMap<>();
 
@@ -194,24 +191,25 @@ public final class ParserWriterUtils {
   }
 
   private static MethodSpec createStringParseMethod(Class<?> targetClass) {
-    return MethodSpec.methodBuilder("parse")
+    final ClassName targetClassName = ClassName.get(targetClass);
+    final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-        .returns(ClassName.get(targetClass))
-        .addParameter(ParserCommonUtils.STRING, "jsonText")
-        .addCode("""
-            if (jsonText == null) {
-              return null;
-            }
+        .returns(targetClassName)
+        .addParameter(ParserCommonUtils.STRING, "jsonText");
 
-            return parse($T.fromText(jsonText));
-            """, ParserCommonUtils.getJSONObjectHandle())
-        .build();
+    methodBuilder.beginControlFlow("if (jsonText == null)")
+        .addStatement("return null")
+        .endControlFlow()
+        .addStatement("return parse($T.fromText(jsonText))", ParserCommonUtils.getJSONObjectHandle());
+
+    return methodBuilder.build();
   }
 
   private static MethodSpec createObjectParseMethod(Class<?> targetClass, String parserPackage) {
+    final ClassName targetClassName = ClassName.get(targetClass);
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-        .returns(ClassName.get(targetClass))
+        .returns(targetClassName)
         .addParameter(ParserCommonUtils.getJSONObjectHandle(), "obj");
 
     methodBuilder.beginControlFlow("if (obj == null)")
