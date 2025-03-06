@@ -158,6 +158,14 @@ public class ConfigurationValidator {
       return;
     }
 
+    // Inner classes are not allowed
+    if (clazz.isMemberClass()) {
+      System.out
+          .println(RED_CROSS + " " + clazz.getName() + ": Inner classes are not supported - Move class to top level");
+      hasErrors = true;
+      return;
+    }
+
     boolean classHasErrors = false;
 
     // Check for public no-args constructor

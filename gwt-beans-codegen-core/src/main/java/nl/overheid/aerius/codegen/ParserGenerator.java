@@ -153,7 +153,6 @@ public class ParserGenerator {
   }
 
   private static void validateConfiguration(Class<?> rootClass, Set<String> customParserTypes) {
-    System.out.println("=== Starting validation of " + rootClass.getName() + " ===");
     final ConfigurationValidator validator = new ConfigurationValidator();
     validator.setCustomParserTypes(customParserTypes);
     if (!validator.validate(rootClass)) {

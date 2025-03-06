@@ -107,7 +107,7 @@ public class TypeAnalyzer {
         System.out.println();
       }
 
-      printTypeHierarchy(rootClass, "", new HashSet<>());
+      // printTypeHierarchy(rootClass, "", new HashSet<>());
 
       return discoveredTypes;
     } catch (ClassNotFoundException e) {
