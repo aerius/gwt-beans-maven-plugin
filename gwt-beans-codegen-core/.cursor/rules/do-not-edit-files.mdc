@@ -1,5 +1,0 @@
----
-description: Editing the JSON value types
-globs: JSONObjectHandle.java,JSONArrayHandle.java, JSONValue.java, JSONValueHandle.java
----
-DO NOT UPDATE THIS FILE. ABORT IMMEDIATELY WHEN ATTEMPTING TO.
