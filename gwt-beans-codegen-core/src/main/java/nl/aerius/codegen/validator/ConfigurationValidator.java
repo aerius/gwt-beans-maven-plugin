@@ -6,6 +6,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -305,6 +307,57 @@ public class ConfigurationValidator {
   private boolean validateFieldType(final Field field) {
     try {
       final boolean isValid = true;
+
+      // Check if this is a Map field
+      if (Map.class.isAssignableFrom(field.getType())) {
+        final Type[] genericTypes = ((ParameterizedType) field.getGenericType()).getActualTypeArguments();
+        final Type keyType = genericTypes[0];
+
+        // Skip primitive types, String, and enums as they don't need validation
+        if (keyType instanceof Class<?> &&
+            !((Class<?>) keyType).isPrimitive() &&
+            !keyType.equals(String.class) &&
+            !((Class<?>) keyType).isEnum()) {
+
+          final Class<?> keyClass = (Class<?>) keyType;
+
+          // Check for fromKey method
+          try {
+            final Method fromKeyMethod = keyClass.getMethod("fromKey", String.class);
+            if (!Modifier.isStatic(fromKeyMethod.getModifiers())) {
+              System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                  ": Map key type '" + keyClass.getName() +
+                  "' must have a static fromKey(String) method");
+              hasErrors = true;
+              return false;
+            }
+          } catch (NoSuchMethodException e) {
+            System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                ": Map key type '" + keyClass.getName() +
+                "' must have a static fromKey(String) method");
+            hasErrors = true;
+            return false;
+          }
+
+          // Check for explicit toString implementation
+          try {
+            final Method toStringMethod = keyClass.getMethod("toString");
+            if (toStringMethod.getDeclaringClass().equals(Object.class)) {
+              System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                  ": Map key type '" + keyClass.getName() +
+                  "' must explicitly implement toString()");
+              hasErrors = true;
+              return false;
+            }
+          } catch (NoSuchMethodException e) {
+            System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                ": Map key type '" + keyClass.getName() +
+                "' must implement toString()");
+            hasErrors = true;
+            return false;
+          }
+        }
+      }
 
       // Process all types in the field
       FileUtils.analyzeFieldType(field, type -> {
