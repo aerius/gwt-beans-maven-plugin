@@ -1,4 +1,4 @@
-package nl.overheid.aerius.codegen.test.json;
+package nl.overheid.aerius.json;
 
 import com.fasterxml.jackson.databind.JsonNode;
 

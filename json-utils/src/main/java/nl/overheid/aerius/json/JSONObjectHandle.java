@@ -1,4 +1,4 @@
-package nl.overheid.aerius.codegen.test.json;
+package nl.overheid.aerius.json;
 
 import java.util.ArrayList;
 import java.util.Iterator;

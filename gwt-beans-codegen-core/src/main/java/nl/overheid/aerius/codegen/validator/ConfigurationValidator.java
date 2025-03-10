@@ -29,9 +29,11 @@ public class ConfigurationValidator {
   private static final String WUI_CLIENT_OUTPUT_DIR = FileUtils.getWuiClientOutputDir();
   private static final String GREEN_CHECK = "✅";
   private static final String RED_CROSS = "❌";
+  private static final String WARNING = "⚠️";
 
   private final Set<Class<?>> processedTypes = new HashSet<>();
   private final Set<String> customParserTypes = new HashSet<>();
+  private final Set<String> skippedTypes = new HashSet<>();
   private final TypeAnalyzer typeAnalyzer = new TypeAnalyzer();
   private final Set<Class<?>> validatedClasses = new HashSet<>();
   private boolean hasErrors = false;
@@ -43,17 +45,36 @@ public class ConfigurationValidator {
     }
   }
 
+  public void addSkippedType(String fullyQualifiedClassName) {
+    skippedTypes.add(fullyQualifiedClassName);
+  }
+
+  public void addSkippedType(Class<?> clazz) {
+    skippedTypes.add(clazz.getName());
+  }
+
+  private boolean shouldSkip(Class<?> type) {
+    return type == null ||
+        hasCustomParser(type) ||
+        skippedTypes.contains(type.getName());
+  }
+
+  public boolean isSkipped(Class<?> type) {
+    return shouldSkip(type);
+  }
+
+  public boolean isSkipped(String fullyQualifiedClassName) {
+    return skippedTypes.contains(fullyQualifiedClassName);
+  }
+
   private boolean hasCustomParser(Class<?> type) {
     return customParserTypes.contains(type.getSimpleName());
   }
 
   public boolean validate(Class<?> type) {
-    if (type == null) {
-      return true;
-    }
-
-    if (hasCustomParser(type)) {
-      System.out.println("Skipping validation for " + type.getName() + " (has custom parser)");
+    if (shouldSkip(type)) {
+      System.out
+          .println("Skipping validation for " + (type != null ? type.getName() : "null") + " (explicitly skipped)");
       return true;
     }
 
@@ -154,7 +175,16 @@ public class ConfigurationValidator {
     // Interfaces are not allowed
     if (clazz.isInterface()) {
       System.out
-          .println("⚠️ " + clazz.getName() + ": Interface type detected - Consider using a concrete class instead");
+          .println(
+              WARNING + " " + clazz.getName() + ": Interface type detected (TODO)");
+      return;
+    }
+
+    // Generic types are not allowed
+    if (clazz.getTypeParameters().length > 0) {
+      System.out
+          .println(WARNING + " " + clazz.getName()
+              + ": Generic type parameters are not supported - Remove type parameters like <T>");
       return;
     }
 

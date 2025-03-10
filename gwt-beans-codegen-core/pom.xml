@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-      <groupId>nl.overheid.aerius</groupId>
-      <artifactId>aerius-calculator</artifactId>
-      <version>2024.2-SNAPSHOT</version>
+        <groupId>nl.aerius</groupId>
+        <artifactId>json-tools-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>gwt-beans-codegen-core</artifactId>
@@ -20,6 +20,10 @@
             <groupId>com.github.javaparser</groupId>
             <artifactId>javaparser-symbol-solver-core</artifactId>
             <version>3.25.8</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <dependency>
             <groupId>com.palantir.javapoet</groupId>
@@ -37,21 +41,19 @@
             <version>1.3.2</version>
         </dependency>
 
-        <!-- We need jsinterop for the @JsProperty annotation, in order to validate some stuff -->
+        <!-- We need jsinterop for the @JsProperty annotation -->
         <dependency>
-          <groupId>com.google.jsinterop</groupId>
-          <artifactId>jsinterop-annotations</artifactId>
-          <version>2.0.0</version>
+            <groupId>com.google.jsinterop</groupId>
+            <artifactId>jsinterop-annotations</artifactId>
+            <version>2.0.0</version>
         </dependency>
-        <!-- Jackson for JSON serialization in tests -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.16.1</version>
-        </dependency>
-
 
         <!-- Test dependencies -->
+        <dependency>
+            <groupId>nl.aerius</groupId>
+            <artifactId>json-utils</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -70,7 +72,6 @@
             <version>0.21.0</version>
             <scope>test</scope>
         </dependency>
-        <!-- Mockito for tests -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
@@ -86,7 +87,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>nl.overheid.aerius.codegen.ParserGenerator</mainClass>
+                    <mainClass>nl.aerius.codegen.ParserGenerator</mainClass>
                 </configuration>
             </plugin>
             <plugin>
@@ -115,7 +116,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>nl.overheid.aerius.codegen.ParserGenerator</mainClass>
+                                    <mainClass>nl.aerius.codegen.ParserGenerator</mainClass>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>

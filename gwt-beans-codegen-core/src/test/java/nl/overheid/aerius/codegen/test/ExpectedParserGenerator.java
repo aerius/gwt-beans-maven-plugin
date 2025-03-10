@@ -9,8 +9,8 @@ import com.palantir.javapoet.JavaFile;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeSpec;
 
-import nl.overheid.aerius.codegen.test.json.JSONObjectHandle;
 import nl.overheid.aerius.codegen.test.types.TestRootObjectType;
+import nl.overheid.aerius.json.JSONObjectHandle;
 
 public class ExpectedParserGenerator {
   private static final ClassName STRING = ClassName.get(String.class);

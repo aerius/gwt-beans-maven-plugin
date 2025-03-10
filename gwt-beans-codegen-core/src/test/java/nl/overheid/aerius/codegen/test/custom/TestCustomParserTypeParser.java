@@ -1,7 +1,7 @@
 package nl.overheid.aerius.codegen.test.custom;
 
-import nl.overheid.aerius.codegen.test.json.JSONObjectHandle;
 import nl.overheid.aerius.codegen.test.types.TestCustomParserType;
+import nl.overheid.aerius.json.JSONObjectHandle;
 
 /**
  * Custom parser for TestCustomParserType.
