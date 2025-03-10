@@ -53,7 +53,7 @@ Each generated parser follows a consistent pattern:
 
 ```java
 @Generated(
-    value = "nl.overheid.aerius.codegen.ParserGenerator",
+    value = "nl.aerius.codegen.ParserGenerator",
     date = "timestamp"
 )
 public class TypeNameParser {

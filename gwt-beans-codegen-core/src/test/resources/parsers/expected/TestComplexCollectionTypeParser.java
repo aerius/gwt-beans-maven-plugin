@@ -1,15 +1,15 @@
-package nl.overheid.aerius.codegen.test.generated;
+package nl.aerius.codegen.test.generated;
 
 import java.util.LinkedHashMap;
 
 import javax.annotation.processing.Generated;
 
 import nl.aerius.wui.service.json.JSONObjectHandle;
-import nl.overheid.aerius.codegen.test.types.TestComplexCollectionType;
-import nl.overheid.aerius.codegen.test.types.TestEnumType;
-import nl.overheid.aerius.codegen.test.types.TestSimpleTypesType;
+import nl.aerius.codegen.test.types.TestComplexCollectionType;
+import nl.aerius.codegen.test.types.TestEnumType;
+import nl.aerius.codegen.test.types.TestSimpleTypesType;
 
-@Generated(value = "nl.overheid.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
+@Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestComplexCollectionTypeParser {
   public static TestComplexCollectionType parse(String jsonText) {
     if (jsonText == null) {

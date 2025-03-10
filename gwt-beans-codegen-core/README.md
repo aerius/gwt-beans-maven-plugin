@@ -33,7 +33,7 @@ The generated parsers support:
 The code generator can be used standalone or through Maven (recommended). For standalone use:
 
 ```bash
-java -cp ... nl.overheid.aerius.codegen.ParserGenerator \
+java -cp ... nl.aerius.codegen.ParserGenerator \
   --root-class com.example.MyClass \
   --output-dir src/generated/java \
   --parser-package com.example.parser \

@@ -114,6 +114,6 @@ fi
 
 echo "Running GWT Bean Parser Generator..."
 echo "Debug: Running with arguments: ${GENERATOR_ARGS[@]}"
-java -cp "$FULL_CP:$SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar" nl.overheid.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
+java -cp "$FULL_CP:$SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar" nl.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
 
 echo "Parser generation completed successfully!" 

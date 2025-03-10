@@ -1,11 +1,11 @@
-package nl.overheid.aerius.codegen.test.generated;
+package nl.aerius.codegen.test.generated;
 
 import javax.annotation.processing.Generated;
 
 import nl.aerius.wui.service.json.JSONObjectHandle;
-import nl.overheid.aerius.codegen.test.types.TestEnumType;
+import nl.aerius.codegen.test.types.TestEnumType;
 
-@Generated(value = "nl.overheid.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
+@Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestEnumTypeParser {
   public static TestEnumType parse(String jsonText) {
     if (jsonText == null) {

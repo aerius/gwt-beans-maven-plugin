@@ -16,7 +16,7 @@ A Java library that generates parser code for Java beans. It:
 ### Usage
 
 ```bash
-java -cp ... nl.overheid.aerius.codegen.ParserGenerator \
+java -cp ... nl.aerius.codegen.ParserGenerator \
   --root-class com.example.MyClass \
   --output-dir src/generated/java \
   --parser-package com.example.parser \
