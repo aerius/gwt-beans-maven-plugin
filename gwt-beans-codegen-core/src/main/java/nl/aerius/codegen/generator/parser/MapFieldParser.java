@@ -3,6 +3,7 @@ package nl.aerius.codegen.generator.parser;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,13 +36,20 @@ public class MapFieldParser implements FieldParser {
       final Type keyType = genericTypes[0];
       final Type valueType = genericTypes[1];
 
+      // Skip fields with wildcard types
+      if (keyType.getTypeName().contains("?") || valueType.getTypeName().contains("?")) {
+        final CodeBlock.Builder code = CodeBlock.builder();
+        code.add("// Skipping field with complex generic type: $L", fieldName);
+        return code.build();
+      }
+
       final CodeBlock.Builder code = CodeBlock.builder();
 
       code.beginControlFlow(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true))
           .addStatement("final $T mapObj = $L.getObject($S)", ParserCommonUtils.getJSONObjectHandle(), objVarName,
               fieldName);
 
-      // Handle interface types and wildcard types
+      // Handle interface types
       if (valueType.getTypeName().contains("Comparable")) {
         // For Comparable<?>, treat it as a map of string keys and values
         code.addStatement("final $T<$T, $T> map = new $T<>()", LINKED_HASH_MAP, ParserCommonUtils.STRING,
@@ -74,7 +82,15 @@ public class MapFieldParser implements FieldParser {
 
   private void generateSimpleValueMapCode(CodeBlock.Builder code, Type keyType, Type valueType, Field field,
       String objVarName, String parserPackage) {
-    ClassName mapImpl = LINKED_HASH_MAP; // Always use LinkedHashMap to preserve insertion order
+    // Determine the map implementation based on the field's declared type
+    Class<?> declaredType = field.getType();
+    ClassName mapImpl;
+    if (declaredType.equals(HashMap.class)) {
+      mapImpl = HASH_MAP;
+    } else {
+      mapImpl = LINKED_HASH_MAP; // Default to LinkedHashMap for Map interface and LinkedHashMap
+    }
+
     ClassName valueClass;
     String getterMethod;
     boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
@@ -141,9 +157,23 @@ public class MapFieldParser implements FieldParser {
     final Type rawType = paramType.getRawType();
     final Type elementType = paramType.getActualTypeArguments()[0];
 
+    // Skip if element type is a wildcard
+    if (elementType.getTypeName().contains("?")) {
+      code.add("// Skipping field with complex generic type: $L", fieldName);
+      return;
+    }
+
+    // Determine the map implementation based on the field's declared type
+    Class<?> declaredType = field.getType();
+    ClassName mapImpl;
+    if (declaredType.equals(HashMap.class)) {
+      mapImpl = HASH_MAP;
+    } else {
+      mapImpl = LINKED_HASH_MAP; // Default to LinkedHashMap for Map interface and LinkedHashMap
+    }
+
     boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
     ClassName keyClass = isEnumKey ? ClassName.get((Class<?>) keyType) : ParserCommonUtils.STRING;
-    ClassName mapImpl = LINKED_HASH_MAP;
 
     // Handle different collection types
     if (rawType.equals(List.class)) {
@@ -232,25 +262,6 @@ public class MapFieldParser implements FieldParser {
               .unindent()
               .addStatement("})")
               .addStatement("map.put(key, list)")
-              .unindent()
-              .addStatement("})");
-        }
-      } else if (elementType.getTypeName().contains("?")) {
-        // For wildcard types in lists, treat them as lists of strings
-        code.addStatement("final $T<$T, $T<$T>> map = new $T<>()",
-            mapImpl, keyClass, LIST, ParserCommonUtils.STRING, mapImpl);
-
-        if (isEnumKey) {
-          code.add("mapObj.keySet().forEach(key -> {\n")
-              .indent()
-              .addStatement("final $T enumKey = $T.valueOf(key)", keyClass, keyClass)
-              .addStatement("map.put(enumKey, mapObj.getStringArray(key))")
-              .unindent()
-              .addStatement("})");
-        } else {
-          code.add("mapObj.keySet().forEach(key -> {\n")
-              .indent()
-              .addStatement("map.put(key, mapObj.getStringArray(key))")
               .unindent()
               .addStatement("})");
         }

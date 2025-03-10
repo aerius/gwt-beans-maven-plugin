@@ -1,7 +1,7 @@
 package nl.aerius.codegen.test.generated;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import javax.annotation.processing.Generated;
@@ -30,7 +30,7 @@ public class TestAdvancedMapTypeParser {
     // Parse doubleListMap
     if (obj.has("doubleListMap") && !obj.isNull("doubleListMap")) {
       final JSONObjectHandle mapObj = obj.getObject("doubleListMap");
-      final HashMap<String, List<Double>> map = new HashMap<>();
+      final LinkedHashMap<String, List<Double>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getNumberArray(key));
       });
@@ -40,7 +40,7 @@ public class TestAdvancedMapTypeParser {
     // Parse stringListMap
     if (obj.has("stringListMap") && !obj.isNull("stringListMap")) {
       final JSONObjectHandle mapObj = obj.getObject("stringListMap");
-      final HashMap<String, List<String>> map = new HashMap<>();
+      final LinkedHashMap<String, List<String>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getStringArray(key));
       });
@@ -50,7 +50,7 @@ public class TestAdvancedMapTypeParser {
     // Parse objectListMap
     if (obj.has("objectListMap") && !obj.isNull("objectListMap")) {
       final JSONObjectHandle mapObj = obj.getObject("objectListMap");
-      final HashMap<String, List<TestSimpleTypesType>> map = new HashMap<>();
+      final LinkedHashMap<String, List<TestSimpleTypesType>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final List<TestSimpleTypesType> list = new ArrayList<>();
         mapObj.getArray(key).forEach(item -> {
@@ -61,15 +61,14 @@ public class TestAdvancedMapTypeParser {
       config.setObjectListMap(map);
     }
 
-    // Parse interfaceMap - this should be skipped as it has a complex interface
-    // type
+    // Parse interfaceMap
     // Skipping field with complex generic type: interfaceMap
 
-    // Parse wildcardListMap - this should be skipped as it has a wildcard type
-    // Skipping field with wildcard type parameters: wildcardListMap
+    // Parse wildcardListMap
+    // Skipping field with complex generic type: wildcardListMap
 
-    // Parse wildcardKeyMap - this should be skipped as it has a wildcard key type
-    // Skipping field with wildcard type parameters: wildcardKeyMap
+    // Parse wildcardKeyMap
+    // Skipping field with complex generic type: wildcardKeyMap
 
     // Parse sanity
     if (obj.has("sanity")) {
