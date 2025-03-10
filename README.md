@@ -1,98 +1,35 @@
-# GWT Bean Parser Generator
+# GWT Beans Maven Plugin
 
-A tool to help migrate away from GWT-RPC by generating JSON parsers for your Java beans. This project helps you transition from GWT-RPC to a more modern JSON-based approach while keeping your existing Java bean models.
+A Maven plugin for generating GWT bean parsers.
 
-## 1. Core Code Generator (`gwt-beans-codegen-core`)
+## Project Structure
 
-A Java library that generates parser code for Java beans. It:
+This project consists of the following modules:
 
-- Analyzes Java classes to understand their structure
-- Generates corresponding parser classes that handle JSON serialization/deserialization
-- Supports various field types including primitives, collections, maps, and enums
-- Handles complex nested types and custom parsers
-- Preserves type safety and null handling
-- Can be run standalone with command-line arguments
+1. **json-utils**: A lightweight JSON handling library built on Jackson.
+2. **gwt-beans-codegen-core**: The core code generation engine for GWT bean parsers.
 
-### Usage
+## Building
+
+To build all modules:
 
 ```bash
-java -cp ... nl.aerius.codegen.ParserGenerator \
-  --root-class com.example.MyClass \
-  --output-dir src/generated/java \
-  --parser-package com.example.parser \
-  [--custom-parser-dir src/main/java/custom/parsers]
+mvn clean install
 ```
 
-## 2. Maven Plugin (Coming Soon)
+## Modules
 
-A Maven plugin that integrates the code generator into the Maven build process. It will:
+### json-utils
 
-- Make the full project classpath available to the code generator
-- Allow configuration through the Maven POM
-- Generate parsers during the build process
-- Support incremental builds
-- Handle dependencies correctly
+A lightweight JSON handling library that provides utilities for working with JSON data.
 
-### Planned Usage
+See [json-utils/README.md](json-utils/README.md) for usage instructions.
 
-```xml
-<plugin>
-  <groupId>nl.overheid.aerius</groupId>
-  <artifactId>gwt-beans-maven-plugin</artifactId>
-  <version>${project.version}</version>
-  <executions>
-    <execution>
-      <goals>
-        <goal>generate-parsers</goal>
-      </goals>
-      <configuration>
-        <rootClass>com.example.MyClass</rootClass>
-        <outputDirectory>src/generated/java</outputDirectory>
-        <parserPackage>com.example.parser</parserPackage>
-        <customParserDirectory>src/main/java/custom/parsers</customParserDirectory>
-      </configuration>
-    </execution>
-  </executions>
-</plugin>
-```
+### gwt-beans-codegen-core
 
-## Why Move Away from GWT-RPC?
-
-GWT-RPC, while powerful, has several limitations:
-
-- Tightly couples client and server implementations
-- Requires both ends to use GWT
-- Limited interoperability with other systems
-- No longer actively maintained
-
-This generator helps you migrate to a JSON-based approach while:
-
-- Keeping your existing Java bean models
-- Maintaining type safety
-- Supporting all common Java types
-- Allowing gradual migration
-- Enabling interoperability with any JSON-capable client or server
-
-## Features
-
-The generator supports:
-
-- All Java primitive types and their wrappers
-- Collections (List, Set, etc.)
-- Maps (with both String and Enum keys)
-- Enums
-- Date/time types
-- Nested objects
-- Custom parsers for special cases
-- Null safety
-- Type safety
-
-## Project Status
-
-- Core generator: Functional and tested
-- Maven plugin: Under development
+The core code generation engine for GWT bean parsers.
 
 ## Requirements
 
-- Java 11 or higher
-- Maven 3.6 or higher (for the Maven plugin)
+- Java 17 or higher
+- Maven 3.6 or higher
