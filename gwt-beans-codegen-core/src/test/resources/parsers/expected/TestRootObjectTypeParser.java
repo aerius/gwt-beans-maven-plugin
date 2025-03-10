@@ -62,6 +62,11 @@ public class TestRootObjectTypeParser {
       config.setComplexCollection(TestComplexCollectionTypeParser.parse(obj.getObject("complexCollection")));
     }
 
+    // Parse advancedMap
+    if (obj.has("advancedMap")) {
+      config.setAdvancedMap(TestAdvancedMapTypeParser.parse(obj.getObject("advancedMap")));
+    }
+
     return config;
   }
 }

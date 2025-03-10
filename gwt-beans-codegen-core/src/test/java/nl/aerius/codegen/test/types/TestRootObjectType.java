@@ -12,6 +12,7 @@ public class TestRootObjectType {
   private TestCustomParserType customParserType;
   private TestEnumType enumType;
   private TestComplexCollectionType complexCollection;
+  private TestAdvancedMapType advancedMap;
 
   public String getFoo() {
     return foo;
@@ -77,6 +78,14 @@ public class TestRootObjectType {
     this.complexCollection = complexCollection;
   }
 
+  public TestAdvancedMapType getAdvancedMap() {
+    return advancedMap;
+  }
+
+  public void setAdvancedMap(TestAdvancedMapType advancedMap) {
+    this.advancedMap = advancedMap;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -87,6 +96,7 @@ public class TestRootObjectType {
     obj.setCustomParserType(TestCustomParserType.createFullObject());
     obj.setEnumType(TestEnumType.createFullObject());
     obj.setComplexCollection(createTestComplexCollection());
+    obj.setAdvancedMap(TestAdvancedMapType.createFullObject());
     return obj;
   }
 
@@ -125,6 +135,7 @@ public class TestRootObjectType {
     obj.setCustomParserType(null);
     obj.setEnumType(null);
     obj.setComplexCollection(null);
+    obj.setAdvancedMap(null);
     return obj;
   }
 }

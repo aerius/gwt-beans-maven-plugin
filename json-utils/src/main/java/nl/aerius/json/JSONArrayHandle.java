@@ -14,6 +14,12 @@ public class JSONArrayHandle {
     this.inner = inner;
   }
 
+  public void forEach(final Consumer<JSONObjectHandle> consumer) {
+    for (int i = 0; i < inner.size(); i++) {
+      consumer.accept(new JSONObjectHandle(inner.get(i)));
+    }
+  }
+
   public void forEachString(Consumer<String> consumer) {
     for (int i = 0; i < inner.size(); i++) {
       consumer.accept(inner.get(i).asText());
