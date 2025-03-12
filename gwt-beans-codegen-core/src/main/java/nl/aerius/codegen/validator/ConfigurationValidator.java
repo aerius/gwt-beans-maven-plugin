@@ -313,13 +313,23 @@ public class ConfigurationValidator {
         final Type[] genericTypes = ((ParameterizedType) field.getGenericType()).getActualTypeArguments();
         final Type keyType = genericTypes[0];
 
-        // Skip primitive types, String, and enums as they don't need validation
-        if (keyType instanceof Class<?> &&
-            !((Class<?>) keyType).isPrimitive() &&
-            !keyType.equals(String.class) &&
-            !((Class<?>) keyType).isEnum()) {
-
+        // Skip primitive types, their wrappers, String, and enums as they don't need
+        // validation
+        if (keyType instanceof Class<?>) {
           final Class<?> keyClass = (Class<?>) keyType;
+          if (keyClass.isPrimitive() ||
+              keyClass.equals(String.class) ||
+              keyClass.isEnum() ||
+              keyClass.equals(Integer.class) ||
+              keyClass.equals(Long.class) ||
+              keyClass.equals(Double.class) ||
+              keyClass.equals(Float.class) ||
+              keyClass.equals(Boolean.class) ||
+              keyClass.equals(Byte.class) ||
+              keyClass.equals(Short.class) ||
+              keyClass.equals(Character.class)) {
+            return isValid;
+          }
 
           // Check for fromKey method
           try {
