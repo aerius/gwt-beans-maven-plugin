@@ -331,38 +331,38 @@ public class ConfigurationValidator {
             return isValid;
           }
 
-          // Check for fromKey method
+          // Check for fromStringValue method
           try {
-            final Method fromKeyMethod = keyClass.getMethod("fromKey", String.class);
-            if (!Modifier.isStatic(fromKeyMethod.getModifiers())) {
+            final Method fromStringValueMethod = keyClass.getMethod("fromStringValue", String.class);
+            if (!Modifier.isStatic(fromStringValueMethod.getModifiers())) {
               System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
                   ": Map key type '" + keyClass.getName() +
-                  "' must have a static fromKey(String) method");
+                  "' must have a static fromStringValue(String) method");
               hasErrors = true;
               return false;
             }
           } catch (NoSuchMethodException e) {
             System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
                 ": Map key type '" + keyClass.getName() +
-                "' must have a static fromKey(String) method");
+                "' must have a static fromStringValue(String) method");
             hasErrors = true;
             return false;
           }
 
-          // Check for explicit toString implementation
+          // Check for toStringValue implementation
           try {
-            final Method toStringMethod = keyClass.getMethod("toString");
-            if (toStringMethod.getDeclaringClass().equals(Object.class)) {
+            final Method toStringValueMethod = keyClass.getMethod("toStringValue");
+            if (!Modifier.isPublic(toStringValueMethod.getModifiers())) {
               System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
                   ": Map key type '" + keyClass.getName() +
-                  "' must explicitly implement toString()");
+                  "' must have a public toStringValue() method");
               hasErrors = true;
               return false;
             }
           } catch (NoSuchMethodException e) {
             System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
                 ": Map key type '" + keyClass.getName() +
-                "' must implement toString()");
+                "' must have a toStringValue() method");
             hasErrors = true;
             return false;
           }
