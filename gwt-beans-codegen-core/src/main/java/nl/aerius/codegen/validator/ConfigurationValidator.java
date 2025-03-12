@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.palantir.javapoet.ClassName;
 
@@ -203,6 +204,9 @@ public class ConfigurationValidator {
     // Check for public no-args constructor
     classHasErrors |= !validateConstructor(clazz);
 
+    // Check for getters without corresponding fields
+    validateGettersWithoutFields(clazz);
+
     // Check all fields
     for (Field field : clazz.getDeclaredFields()) {
       if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())) {
@@ -216,6 +220,48 @@ public class ConfigurationValidator {
 
     if (!classHasErrors) {
       System.out.println(GREEN_CHECK + " " + clazz.getName() + ": All validations passed");
+    }
+  }
+
+  private void validateGettersWithoutFields(final Class<?> clazz) {
+    // Get all methods
+    for (Method method : clazz.getDeclaredMethods()) {
+      // Skip if not public
+      if (!Modifier.isPublic(method.getModifiers())) {
+        continue;
+      }
+
+      // Skip if annotated with @JsonIgnore
+      if (method.isAnnotationPresent(JsonIgnore.class)) {
+        continue;
+      }
+
+      String methodName = method.getName();
+      // Check if it's a getter (starts with 'get' or 'is' and has no parameters)
+      if ((methodName.startsWith("get") || methodName.startsWith("is")) &&
+          method.getParameterCount() == 0 &&
+          !method.getReturnType().equals(void.class)) {
+
+        String expectedFieldName;
+        if (methodName.startsWith("get")) {
+          expectedFieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
+        } else { // starts with "is"
+          expectedFieldName = methodName.substring(2, 3).toLowerCase() + methodName.substring(3);
+        }
+
+        // Try to find corresponding field
+        try {
+          Field field = clazz.getDeclaredField(expectedFieldName);
+          // Skip if field exists and is private
+          if (Modifier.isPrivate(field.getModifiers())) {
+            continue;
+          }
+        } catch (NoSuchFieldException e) {
+          // Field doesn't exist
+          System.out.println(WARNING + " " + clazz.getName() + ": Getter '" + methodName +
+              "' has no corresponding private field '" + expectedFieldName + "'");
+        }
+      }
     }
   }
 
