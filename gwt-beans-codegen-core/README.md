@@ -22,11 +22,36 @@ The generated parsers support:
 - Object types (Boolean, Byte, Short, Integer, Long, Float, Double, Character, String)
 - Arrays (primitive and object arrays)
 - Collections (List, Set)
-- Maps (with both String and Enum keys)
+- Maps (with String and Enum keys)
 - Nested objects
 - Enums
-- Date/time types
 - Custom parsers for special types
+
+### Type Support Examples
+
+```java
+class Example {
+    // Basic types
+    private String string;
+    private int primitiveInt;
+    private Integer wrapperInt;
+
+    // Collections
+    private List<String> stringList;
+    private Set<CustomObject> objectSet;
+
+    // Maps
+    private Map<String, CustomObject> stringKeyMap;
+    private Map<EnumType, String> enumKeyMap;
+
+    // Arrays
+    private int[] primitiveArray;
+    private String[] objectArray;
+
+    // Nested structures
+    private List<Map<String, CustomObject>> nestedListMap;
+}
+```
 
 ## Usage
 
@@ -47,21 +72,37 @@ java -cp ... nl.aerius.codegen.ParserGenerator \
 - `--parser-package`: Package name for the generated parsers
 - `--custom-parser-dir`: (Optional) Directory containing custom parser implementations
 
-## How It Works
-
-1. The generator analyzes your root class and all its dependencies
-2. It discovers all types that need parsers
-3. For each type, it generates a parser class that can:
-   - Parse JSON into your Java objects
-   - Handle null values safely
-   - Maintain type safety
-   - Support nested structures
-4. Custom parsers can be provided for special cases
-
 ## Requirements
 
-- Java 11 or higher
-- Maven 3.x (if using through Maven)
+- Java 17 or higher
+- Maven 3.6 or higher (if using through Maven)
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Parser Generation Fails**
+
+   - Check if all required types are GWT-compatible
+   - Verify no unsupported types are used
+   - Ensure all dependencies are available
+
+2. **Performance Issues**
+
+   - Monitor memory usage with large type hierarchies
+   - Consider breaking up deeply nested structures
+   - Use appropriate collection types for your use case
+
+3. **Integration Problems**
+   - Verify Maven configuration
+   - Check generated code location
+   - Ensure proper package structure
+
+### Getting Help
+
+- Check the [architecture documentation](architecture.md)
+- Review the [development plan](development-plan.md)
+- Open an issue on GitHub
 
 ## Next Steps
 
