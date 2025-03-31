@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -41,6 +42,7 @@ public class TypeAnalyzer {
   private final Set<ClassName> discoveredTypes;
   private final Set<String> printedTypes = new HashSet<>();
   private final Set<String> customParserTypes = new HashSet<>();
+  private static final int MAX_NESTING_DEPTH = 2;
 
   public TypeAnalyzer() {
     primitiveWrappers = new HashSet<>();
@@ -174,7 +176,60 @@ public class TypeAnalyzer {
       }
     }
 
+    // Check for deeply nested structures
+    checkNestingDepth(field, 0);
+
     FileUtils.analyzeFieldType(field, this::analyzeType);
+  }
+
+  private void checkNestingDepth(Field field, int depth) {
+    Type type = field.getGenericType();
+    if (type instanceof ParameterizedType) {
+      ParameterizedType paramType = (ParameterizedType) type;
+      // Start depth at 1 for the first collection type
+      if (isCollectionType(paramType.getRawType())) {
+        checkNestingDepth(paramType, 1, field);
+      } else {
+        checkNestingDepth(paramType, 0, field);
+      }
+    }
+  }
+
+  private void checkNestingDepth(ParameterizedType type, int depth, Field field) {
+    if (depth > MAX_NESTING_DEPTH) {
+      throw new UnsupportedTypeException(
+          String.format("Deeply nested structure (depth %d > %d)", depth, MAX_NESTING_DEPTH),
+          field.getName(),
+          field.getDeclaringClass());
+    }
+
+    // Check if this is a collection type
+    if (isCollectionType(type.getRawType())) {
+      // For collection types, check each type argument
+      for (Type typeArg : type.getActualTypeArguments()) {
+        if (typeArg instanceof ParameterizedType) {
+          // Only increment depth when checking nested collection types
+          checkNestingDepth((ParameterizedType) typeArg, depth + 1, field);
+        }
+      }
+    } else {
+      // For non-collection types, check arguments without incrementing depth
+      for (Type typeArg : type.getActualTypeArguments()) {
+        if (typeArg instanceof ParameterizedType) {
+          checkNestingDepth((ParameterizedType) typeArg, depth, field);
+        }
+      }
+    }
+  }
+
+  private boolean isCollectionType(Type type) {
+    if (!(type instanceof Class<?>)) {
+      return false;
+    }
+    Class<?> clazz = (Class<?>) type;
+    return List.class.isAssignableFrom(clazz) ||
+        Map.class.isAssignableFrom(clazz) ||
+        Set.class.isAssignableFrom(clazz);
   }
 
   private void analyzeType(Type type) {
