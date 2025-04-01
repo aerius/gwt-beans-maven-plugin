@@ -6,7 +6,6 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -85,10 +84,21 @@ public class CollectionFieldParser implements FieldParser {
           fieldName);
     } else if (elementType.isEnum()) {
       // Handle List<Enum> - using forEachString with valueOf
-      code.addStatement("final $T<$T> $L = new $T<>()", List.class, elementType, fieldName, ARRAY_LIST)
+      final ClassName enumType;
+      if (elementType.isMemberClass()) {
+        // For inner enums, we need to include the enclosing class
+        Class<?> enclosingClass = elementType.getEnclosingClass();
+        enumType = ClassName.get(enclosingClass.getPackage().getName(),
+            enclosingClass.getSimpleName(),
+            elementType.getSimpleName());
+      } else {
+        enumType = ClassName.get(elementType);
+      }
+
+      code.addStatement("final $T<$T> $L = new $T<>()", fieldType, enumType, fieldName, collectionImpl)
           .add("$L.getArray($S).forEachString(str -> {\n", objVarName, fieldName)
           .indent()
-          .addStatement("$L.add($T.valueOf(str))", fieldName, elementType)
+          .addStatement("$L.add($T.valueOf(str))", fieldName, enumType)
           .unindent()
           .addStatement("})")
           .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName);

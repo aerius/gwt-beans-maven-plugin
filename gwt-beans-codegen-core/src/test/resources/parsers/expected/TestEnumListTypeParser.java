@@ -1,8 +1,13 @@
 package nl.aerius.codegen.test.generated;
 
 import javax.annotation.processing.Generated;
+
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
@@ -32,6 +37,25 @@ public class TestEnumListTypeParser {
         statusList.add(TestEnumType.Status.valueOf(str));
       });
       config.setStatusList(statusList);
+    }
+
+    // Parse statusSet
+    if (obj.has("statusSet") && !obj.isNull("statusSet")) {
+      final Set<TestEnumType.Status> statusSet = new HashSet<>();
+      obj.getArray("statusSet").forEachString(str -> {
+        statusSet.add(TestEnumType.Status.valueOf(str));
+      });
+      config.setStatusSet(statusSet);
+    }
+
+    // Parse statusMap
+    if (obj.has("statusMap") && !obj.isNull("statusMap")) {
+      final JSONObjectHandle mapObj = obj.getObject("statusMap");
+      final Map<String, TestEnumType.Status> map = new LinkedHashMap<>();
+      mapObj.keySet().forEach(key -> {
+        map.put(key, TestEnumType.Status.valueOf(mapObj.getString(key)));
+      });
+      config.setStatusMap(map);
     }
 
     // Parse description

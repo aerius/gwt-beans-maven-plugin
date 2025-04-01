@@ -107,6 +107,34 @@ public class MapFieldParser implements FieldParser {
     } else if (valueType.equals(String.class)) {
       valueClass = ParserCommonUtils.STRING;
       getterMethod = "getString";
+    } else if (valueType instanceof Class<?> && ((Class<?>) valueType).isEnum()) {
+      // Handle enum values
+      final Class<?> enumClass = (Class<?>) valueType;
+      if (enumClass.isMemberClass()) {
+        // For inner enums, we need to include the enclosing class
+        Class<?> enclosingClass = enumClass.getEnclosingClass();
+        valueClass = ClassName.get(enclosingClass.getPackage().getName(),
+            enclosingClass.getSimpleName(),
+            enumClass.getSimpleName());
+      } else {
+        valueClass = ClassName.get(enumClass);
+      }
+
+      code.addStatement("final $T<$T, $T> map = new $T<>()", Map.class, keyClass, valueClass, mapImpl)
+          .add("mapObj.keySet().forEach(key -> {\n")
+          .indent();
+
+      if (isEnumKey) {
+        code.addStatement("final $T enumKey = $T.valueOf(key)", keyClass, keyClass)
+            .addStatement("map.put(enumKey, $T.valueOf(mapObj.getString(key)))", valueClass);
+      } else {
+        code.addStatement("map.put(key, $T.valueOf(mapObj.getString(key)))", valueClass);
+      }
+
+      code.unindent()
+          .addStatement("})")
+          .addStatement("config.set$L(map)", ParserCommonUtils.capitalize(fieldName));
+      return;
     } else {
       // Handle custom object types
       valueClass = ClassName.get((Class<?>) valueType);
