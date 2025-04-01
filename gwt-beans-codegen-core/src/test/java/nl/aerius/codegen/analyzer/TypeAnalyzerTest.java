@@ -56,13 +56,6 @@ class TypeAnalyzerTest {
     assertTrue(types.contains(ClassName.get("nl.aerius.codegen.analyzer", "TypeAnalyzerTest_DeepNestedClass")));
   }
 
-  @Test
-  void testDeepNestingValidation() {
-    assertThrows(UnsupportedTypeException.class, () -> {
-      analyzer.analyzeClass(DeeplyNestedTestClass.class.getName());
-    });
-  }
-
   // Test classes
   private static class TestClass {
     private String primitiveField;
@@ -94,8 +87,12 @@ class TypeAnalyzerTest {
     private List<Map<String, DeepNestedClass>> nestedCollection;
   }
 
-  // Test class for deep nesting validation
-  private static class DeeplyNestedTestClass {
-    private List<List<List<List<String>>>> tooDeeplyNested;
+  // Test class for complex nested structures with primitive types and enums
+  private enum TestEnum {
+    A, B, C
+  }
+
+  private static class ComplexNestedTestClass {
+    private Map<TestEnum, Map<Integer, Map<Integer, String>>> complexNestedMap;
   }
 }

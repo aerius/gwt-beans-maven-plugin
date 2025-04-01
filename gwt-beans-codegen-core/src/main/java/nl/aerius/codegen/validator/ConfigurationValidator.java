@@ -18,7 +18,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonKey;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.palantir.javapoet.ClassName;
 
@@ -377,40 +379,66 @@ public class ConfigurationValidator {
             return isValid;
           }
 
-          // Check for fromStringValue method
-          try {
-            final Method fromStringValueMethod = keyClass.getMethod("fromStringValue", String.class);
-            if (!Modifier.isStatic(fromStringValueMethod.getModifiers())) {
-              System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
-                  ": Map key type '" + keyClass.getName() +
-                  "' must have a static fromStringValue(String) method");
-              hasErrors = true;
-              return false;
+          // Check for toStringValue implementation or JsonKey annotation
+          boolean hasJsonKey = false;
+          for (Method method : keyClass.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(JsonKey.class)) {
+              hasJsonKey = true;
+              break;
             }
-          } catch (NoSuchMethodException e) {
-            System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
-                ": Map key type '" + keyClass.getName() +
-                "' must have a static fromStringValue(String) method");
-            hasErrors = true;
-            return false;
           }
 
-          // Check for toStringValue implementation
-          try {
-            final Method toStringValueMethod = keyClass.getMethod("toStringValue");
-            if (!Modifier.isPublic(toStringValueMethod.getModifiers())) {
+          if (!hasJsonKey) {
+            try {
+              final Method toStringValueMethod = keyClass.getMethod("toStringValue");
+              if (!Modifier.isPublic(toStringValueMethod.getModifiers())) {
+                System.out.println(WARNING + " " + field.getDeclaringClass().getName() +
+                    ": Map key type '" + keyClass.getName() +
+                    "' should use @JsonKey annotation instead of toStringValue method");
+                System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                    ": Map key type '" + keyClass.getName() +
+                    "' must have a public toStringValue() method or @JsonKey annotation");
+                hasErrors = true;
+                return false;
+              }
+            } catch (NoSuchMethodException e) {
               System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
                   ": Map key type '" + keyClass.getName() +
-                  "' must have a public toStringValue() method");
+                  "' must have either a toStringValue() method or @JsonKey annotation");
               hasErrors = true;
               return false;
             }
-          } catch (NoSuchMethodException e) {
-            System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
-                ": Map key type '" + keyClass.getName() +
-                "' must have a toStringValue() method");
-            hasErrors = true;
-            return false;
+          }
+
+          // Check for fromStringValue implementation or JsonCreator annotation
+          boolean hasJsonCreator = false;
+          for (Method method : keyClass.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(JsonCreator.class)) {
+              hasJsonCreator = true;
+              break;
+            }
+          }
+
+          if (!hasJsonCreator) {
+            try {
+              final Method fromStringValueMethod = keyClass.getMethod("fromStringValue", String.class);
+              if (!Modifier.isStatic(fromStringValueMethod.getModifiers())) {
+                System.out.println(WARNING + " " + field.getDeclaringClass().getName() +
+                    ": Map key type '" + keyClass.getName() +
+                    "' should use @JsonCreator annotation instead of fromStringValue method");
+                System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                    ": Map key type '" + keyClass.getName() +
+                    "' must have a static fromStringValue(String) method or @JsonCreator annotation");
+                hasErrors = true;
+                return false;
+              }
+            } catch (NoSuchMethodException e) {
+              System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                  ": Map key type '" + keyClass.getName() +
+                  "' must have either a static fromStringValue(String) method or @JsonCreator annotation");
+              hasErrors = true;
+              return false;
+            }
           }
         }
       }

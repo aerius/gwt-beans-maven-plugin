@@ -42,7 +42,6 @@ public class TypeAnalyzer {
   private final Set<ClassName> discoveredTypes;
   private final Set<String> printedTypes = new HashSet<>();
   private final Set<String> customParserTypes = new HashSet<>();
-  private static final int MAX_NESTING_DEPTH = 2;
 
   public TypeAnalyzer() {
     primitiveWrappers = new HashSet<>();
@@ -109,8 +108,6 @@ public class TypeAnalyzer {
         System.out.println();
       }
 
-      // printTypeHierarchy(rootClass, "", new HashSet<>());
-
       return discoveredTypes;
     } catch (ClassNotFoundException e) {
       throw new IllegalArgumentException("Could not find class: " + className, e);
@@ -176,60 +173,7 @@ public class TypeAnalyzer {
       }
     }
 
-    // Check for deeply nested structures
-    checkNestingDepth(field, 0);
-
     FileUtils.analyzeFieldType(field, this::analyzeType);
-  }
-
-  private void checkNestingDepth(Field field, int depth) {
-    Type type = field.getGenericType();
-    if (type instanceof ParameterizedType) {
-      ParameterizedType paramType = (ParameterizedType) type;
-      // Start depth at 1 for the first collection type
-      if (isCollectionType(paramType.getRawType())) {
-        checkNestingDepth(paramType, 1, field);
-      } else {
-        checkNestingDepth(paramType, 0, field);
-      }
-    }
-  }
-
-  private void checkNestingDepth(ParameterizedType type, int depth, Field field) {
-    if (depth > MAX_NESTING_DEPTH) {
-      throw new UnsupportedTypeException(
-          String.format("Deeply nested structure (depth %d > %d)", depth, MAX_NESTING_DEPTH),
-          field.getName(),
-          field.getDeclaringClass());
-    }
-
-    // Check if this is a collection type
-    if (isCollectionType(type.getRawType())) {
-      // For collection types, check each type argument
-      for (Type typeArg : type.getActualTypeArguments()) {
-        if (typeArg instanceof ParameterizedType) {
-          // Only increment depth when checking nested collection types
-          checkNestingDepth((ParameterizedType) typeArg, depth + 1, field);
-        }
-      }
-    } else {
-      // For non-collection types, check arguments without incrementing depth
-      for (Type typeArg : type.getActualTypeArguments()) {
-        if (typeArg instanceof ParameterizedType) {
-          checkNestingDepth((ParameterizedType) typeArg, depth, field);
-        }
-      }
-    }
-  }
-
-  private boolean isCollectionType(Type type) {
-    if (!(type instanceof Class<?>)) {
-      return false;
-    }
-    Class<?> clazz = (Class<?>) type;
-    return List.class.isAssignableFrom(clazz) ||
-        Map.class.isAssignableFrom(clazz) ||
-        Set.class.isAssignableFrom(clazz);
   }
 
   private void analyzeType(Type type) {
@@ -302,119 +246,13 @@ public class TypeAnalyzer {
     return hasParser;
   }
 
-  private void printTypeHierarchy(Class<?> type, String indent, Set<Class<?>> visited) {
-    if (type == null || type.getName().startsWith("java.") || type.isPrimitive() || primitiveWrappers.contains(type)) {
-      return;
+  private boolean isCollectionType(Type type) {
+    if (!(type instanceof Class<?>)) {
+      return false;
     }
-
-    // Skip showing primitive arrays as separate types since they're fully described
-    // in the field declaration
-    if (type.isArray() && type.getComponentType().isPrimitive()) {
-      return;
-    }
-
-    // If we've seen this type before, mark it with (skipped), unless it's an enum
-    final boolean alreadyVisited = !visited.add(type);
-    final boolean isEnum = type.isEnum();
-    final boolean hasCustomParser = customParserTypes.contains(type.getSimpleName());
-    final boolean isRoot = indent.isEmpty();
-
-    if (isRoot) {
-      System.out.println(type.getSimpleName() +
-          (isEnum ? " (enum)" : hasCustomParser ? " (custom parser)" : ""));
-    } else {
-      System.out.println(indent + "├── " + type.getSimpleName() +
-          (isEnum ? " (enum)" : hasCustomParser ? " (custom parser)" : alreadyVisited ? " (skipped)" : ""));
-    }
-
-    if (!alreadyVisited && !isEnum && !hasCustomParser) {
-      final String fieldIndent = isRoot ? "" : indent + "│   ";
-
-      // Print fields
-      for (Field field : type.getDeclaredFields()) {
-        if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
-          final Type genericType = field.getGenericType();
-          final boolean isGenericType = genericType instanceof ParameterizedType;
-          // Only pass true for isFieldDeclaration if it's a generic type
-          final String fieldTypeStr = getCompleteTypeString(genericType, isGenericType);
-
-          if (isGenericType) {
-            final ParameterizedType paramType = (ParameterizedType) genericType;
-            System.out.println(fieldIndent + "├── " + field.getName() + ": " + fieldTypeStr);
-
-            // Process all type arguments recursively
-            for (Type typeArg : paramType.getActualTypeArguments()) {
-              if (typeArg instanceof Class && !((Class<?>) typeArg).getName().startsWith("java.")) {
-                final Class<?> argClass = (Class<?>) typeArg;
-                // Skip primitive arrays since they're fully described in the field type
-                if (!(argClass.isArray() && argClass.getComponentType().isPrimitive())) {
-                  printTypeHierarchy(argClass, fieldIndent + "│   ", visited);
-                }
-              } else if (typeArg instanceof ParameterizedType) {
-                processParameterizedTypeHierarchy((ParameterizedType) typeArg, fieldIndent + "│   ", visited);
-              }
-            }
-          } else {
-            final Class<?> fieldType = field.getType();
-            System.out.println(fieldIndent + "├── " + field.getName() + ": " + fieldTypeStr);
-            if (!fieldType.getName().startsWith("java.") && !fieldType.isPrimitive()
-                && !primitiveWrappers.contains(fieldType)
-                && !(fieldType.isArray() && fieldType.getComponentType().isPrimitive())
-                && !fieldType.isEnum()
-                && !customParserTypes.contains(fieldType.getSimpleName())) {
-              printTypeHierarchy(fieldType, fieldIndent + "│   ", visited);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private void processParameterizedTypeHierarchy(ParameterizedType type, String indent, Set<Class<?>> visited) {
-    final Type rawType = type.getRawType();
-    if (rawType instanceof Class<?> && !((Class<?>) rawType).getName().startsWith("java.")) {
-      printTypeHierarchy((Class<?>) rawType, indent, visited);
-    }
-
-    for (Type typeArg : type.getActualTypeArguments()) {
-      if (typeArg instanceof Class && !((Class<?>) typeArg).getName().startsWith("java.")) {
-        printTypeHierarchy((Class<?>) typeArg, indent, visited);
-      } else if (typeArg instanceof ParameterizedType) {
-        processParameterizedTypeHierarchy((ParameterizedType) typeArg, indent, visited);
-      }
-    }
-  }
-
-  private String getCompleteTypeString(Type type, boolean isFieldDeclaration) {
-    if (type instanceof Class) {
-      final Class<?> clazz = (Class<?>) type;
-      // Only append (enum) for direct enum types, not for enums in generic types
-      String suffix = "";
-      if (!isFieldDeclaration) {
-        if (clazz.isEnum()) {
-          suffix = " (enum)";
-        } else if (customParserTypes.contains(clazz.getSimpleName())) {
-          suffix = " (custom parser)";
-        }
-      }
-      return clazz.getSimpleName() + suffix;
-    } else if (type instanceof ParameterizedType) {
-      final ParameterizedType paramType = (ParameterizedType) type;
-      final StringBuilder sb = new StringBuilder();
-      sb.append(((Class<?>) paramType.getRawType()).getSimpleName());
-      sb.append("<");
-      final Type[] typeArgs = paramType.getActualTypeArguments();
-      for (int i = 0; i < typeArgs.length; i++) {
-        if (i > 0) {
-          sb.append(", ");
-        }
-        // Pass true for isFieldDeclaration to prevent showing (enum) in generic type
-        // parameters
-        sb.append(getCompleteTypeString(typeArgs[i], true));
-      }
-      sb.append(">");
-      return sb.toString();
-    }
-    return type.getTypeName();
+    Class<?> clazz = (Class<?>) type;
+    return List.class.isAssignableFrom(clazz) ||
+        Map.class.isAssignableFrom(clazz) ||
+        Set.class.isAssignableFrom(clazz);
   }
 }
