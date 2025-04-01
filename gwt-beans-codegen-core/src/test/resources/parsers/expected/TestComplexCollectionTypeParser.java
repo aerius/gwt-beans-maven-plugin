@@ -96,6 +96,29 @@ public class TestComplexCollectionTypeParser {
       config.setEnumKeyIntegerMap(map);
     }
 
+    // Parse integerKeyEnumMap
+    if (obj.has("integerKeyEnumMap") && !obj.isNull("integerKeyEnumMap")) {
+      final JSONObjectHandle mapObj = obj.getObject("integerKeyEnumMap");
+      final LinkedHashMap<Integer, TestEnumType.Status> map = new LinkedHashMap<>();
+      mapObj.keySet().forEach(key -> {
+        final Integer intKey = Integer.parseInt(key);
+        map.put(intKey, TestEnumType.Status.valueOf(mapObj.getString(key)));
+      });
+      config.setIntegerKeyEnumMap(map);
+    }
+
+    // Parse integerKeyObjectMap
+    if (obj.has("integerKeyObjectMap") && !obj.isNull("integerKeyObjectMap")) {
+      final JSONObjectHandle mapObj = obj.getObject("integerKeyObjectMap");
+      final LinkedHashMap<Integer, TestSimpleTypesType> map = new LinkedHashMap<>();
+      mapObj.keySet().forEach(key -> {
+        final Integer intKey = Integer.parseInt(key);
+        final JSONObjectHandle valueObj = mapObj.getObject(key);
+        map.put(intKey, TestSimpleTypesTypeParser.parse(valueObj));
+      });
+      config.setIntegerKeyObjectMap(map);
+    }
+
     return config;
   }
 }
