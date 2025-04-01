@@ -15,6 +15,10 @@ public class TestComplexCollectionType {
   private Map<TestEnumType.Status, TestSimpleTypesType> enumKeyObjectMap;
   private Map<TestEnumType.Status, Integer> enumKeyIntegerMap;
 
+  // Test Map<Integer, X> variants
+  private Map<Integer, TestEnumType.Status> integerKeyEnumMap;
+  private Map<Integer, TestSimpleTypesType> integerKeyObjectMap;
+
   public Map<String, TestSimpleTypesType> getObjectMap() {
     return objectMap;
   }
@@ -71,6 +75,22 @@ public class TestComplexCollectionType {
     this.enumKeyIntegerMap = enumKeyIntegerMap;
   }
 
+  public Map<Integer, TestEnumType.Status> getIntegerKeyEnumMap() {
+    return integerKeyEnumMap;
+  }
+
+  public void setIntegerKeyEnumMap(Map<Integer, TestEnumType.Status> integerKeyEnumMap) {
+    this.integerKeyEnumMap = integerKeyEnumMap;
+  }
+
+  public Map<Integer, TestSimpleTypesType> getIntegerKeyObjectMap() {
+    return integerKeyObjectMap;
+  }
+
+  public void setIntegerKeyObjectMap(Map<Integer, TestSimpleTypesType> integerKeyObjectMap) {
+    this.integerKeyObjectMap = integerKeyObjectMap;
+  }
+
   /**
    * Creates a fully populated instance with test values.
    */
@@ -102,6 +122,15 @@ public class TestComplexCollectionType {
         TestEnumType.Status.ACTIVE, createSimpleType((byte) 10, (short) 20, 1.1f, 'X', 1000L),
         TestEnumType.Status.PENDING, createSimpleType((byte) 30, (short) 40, 2.2f, 'Y', 2000L)));
 
+    // Set up integer key maps
+    test.setIntegerKeyEnumMap(Map.of(
+        1, TestEnumType.Status.ACTIVE,
+        2, TestEnumType.Status.PENDING));
+
+    test.setIntegerKeyObjectMap(Map.of(
+        1, createSimpleType((byte) 50, (short) 60, 3.3f, 'Z', 3000L),
+        2, createSimpleType((byte) 70, (short) 80, 4.4f, 'W', 4000L)));
+
     return test;
   }
 
@@ -128,6 +157,8 @@ public class TestComplexCollectionType {
     test.setEnumKeyStringMap(null);
     test.setEnumKeyObjectMap(null);
     test.setEnumKeyIntegerMap(null);
+    test.setIntegerKeyEnumMap(null);
+    test.setIntegerKeyObjectMap(null);
     return test;
   }
 }
