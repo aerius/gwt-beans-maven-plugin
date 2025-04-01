@@ -13,6 +13,7 @@ public class TestRootObjectType {
   private TestEnumType enumType;
   private TestComplexCollectionType complexCollection;
   private TestAdvancedMapType advancedMap;
+  private TestEnumListType enumListType;
 
   public String getFoo() {
     return foo;
@@ -86,6 +87,14 @@ public class TestRootObjectType {
     this.advancedMap = advancedMap;
   }
 
+  public TestEnumListType getEnumListType() {
+    return enumListType;
+  }
+
+  public void setEnumListType(TestEnumListType enumListType) {
+    this.enumListType = enumListType;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -97,6 +106,7 @@ public class TestRootObjectType {
     obj.setEnumType(TestEnumType.createFullObject());
     obj.setComplexCollection(createTestComplexCollection());
     obj.setAdvancedMap(TestAdvancedMapType.createFullObject());
+    obj.setEnumListType(TestEnumListType.createFullObject());
     return obj;
   }
 
@@ -136,6 +146,7 @@ public class TestRootObjectType {
     obj.setEnumType(null);
     obj.setComplexCollection(null);
     obj.setAdvancedMap(null);
+    obj.setEnumListType(null);
     return obj;
   }
 }

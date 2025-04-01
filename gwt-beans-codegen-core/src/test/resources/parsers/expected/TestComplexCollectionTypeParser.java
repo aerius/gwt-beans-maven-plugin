@@ -11,7 +11,7 @@ import nl.aerius.codegen.test.types.TestSimpleTypesType;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestComplexCollectionTypeParser {
-  public static TestComplexCollectionType parse(String jsonText) {
+  public static TestComplexCollectionType parse(final String jsonText) {
     if (jsonText == null) {
       return null;
     }
@@ -19,7 +19,7 @@ public class TestComplexCollectionTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestComplexCollectionType parse(JSONObjectHandle obj) {
+  public static TestComplexCollectionType parse(final JSONObjectHandle obj) {
     if (obj == null) {
       return null;
     }

@@ -1,5 +1,6 @@
 package nl.aerius.codegen.test.generated;
 
+
 import javax.annotation.processing.Generated;
 import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.aerius.codegen.test.types.TestRootObjectType;
@@ -7,7 +8,7 @@ import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestRootObjectTypeParser {
-  public static TestRootObjectType parse(String jsonText) {
+  public static TestRootObjectType parse(final String jsonText) {
     if (jsonText == null) {
       return null;
     }
@@ -15,7 +16,7 @@ public class TestRootObjectTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestRootObjectType parse(JSONObjectHandle obj) {
+  public static TestRootObjectType parse(final JSONObjectHandle obj) {
     if (obj == null) {
       return null;
     }
@@ -65,6 +66,11 @@ public class TestRootObjectTypeParser {
     // Parse advancedMap
     if (obj.has("advancedMap")) {
       config.setAdvancedMap(TestAdvancedMapTypeParser.parse(obj.getObject("advancedMap")));
+    }
+
+    // Parse enumListType
+    if (obj.has("enumListType")) {
+      config.setEnumListType(TestEnumListTypeParser.parse(obj.getObject("enumListType")));
     }
 
     return config;

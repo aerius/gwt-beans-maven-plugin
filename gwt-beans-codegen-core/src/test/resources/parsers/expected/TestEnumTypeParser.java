@@ -7,7 +7,7 @@ import nl.aerius.codegen.test.types.TestEnumType;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestEnumTypeParser {
-  public static TestEnumType parse(String jsonText) {
+  public static TestEnumType parse(final String jsonText) {
     if (jsonText == null) {
       return null;
     }
@@ -15,7 +15,7 @@ public class TestEnumTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestEnumType parse(JSONObjectHandle obj) {
+  public static TestEnumType parse(final JSONObjectHandle obj) {
     if (obj == null) {
       return null;
     }
@@ -24,7 +24,7 @@ public class TestEnumTypeParser {
 
     // Parse status
     if (obj.has("status") && !obj.isNull("status")) {
-      String statusStr = obj.getString("status");
+      final String statusStr = obj.getString("status");
       if (statusStr != null) {
         try {
           config.setStatus(TestEnumType.Status.valueOf(statusStr));
@@ -36,7 +36,7 @@ public class TestEnumTypeParser {
 
     // Parse priority
     if (obj.has("priority") && !obj.isNull("priority")) {
-      String priorityStr = obj.getString("priority");
+      final String priorityStr = obj.getString("priority");
       if (priorityStr != null) {
         try {
           config.setPriority(TestEnumType.Priority.valueOf(priorityStr));
@@ -48,7 +48,7 @@ public class TestEnumTypeParser {
 
     // Parse nullableStatus
     if (obj.has("nullableStatus") && !obj.isNull("nullableStatus")) {
-      String nullableStatusStr = obj.getString("nullableStatus");
+      final String nullableStatusStr = obj.getString("nullableStatus");
       if (nullableStatusStr != null) {
         try {
           config.setNullableStatus(TestEnumType.Status.valueOf(nullableStatusStr));

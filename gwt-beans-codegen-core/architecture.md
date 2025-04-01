@@ -57,7 +57,7 @@ Each generated parser follows a consistent pattern:
     date = "timestamp"
 )
 public class TypeNameParser {
-    public static TypeName parse(JSONObjectHandle obj) {
+    public static TypeName parse(final JSONObjectHandle obj) {
         if (obj == null) {
             return null;
         }
@@ -114,7 +114,7 @@ The system supports custom parsers for special cases:
 ```java
 @CustomParser
 public class CustomTypeParser {
-    public static CustomType parse(JSONObjectHandle obj) {
+    public static CustomType parse(final JSONObjectHandle obj) {
         // Custom parsing logic
     }
 }

@@ -83,20 +83,20 @@ public class MapFieldParser implements FieldParser {
   private void generateSimpleValueMapCode(CodeBlock.Builder code, Type keyType, Type valueType, Field field,
       String objVarName, String parserPackage) {
     // Determine the map implementation based on the field's declared type
-    Class<?> declaredType = field.getType();
-    ClassName mapImpl;
+    final Class<?> declaredType = field.getType();
+    final ClassName mapImpl;
     if (declaredType.equals(HashMap.class)) {
       mapImpl = HASH_MAP;
     } else {
       mapImpl = LINKED_HASH_MAP; // Default to LinkedHashMap for Map interface and LinkedHashMap
     }
 
-    ClassName valueClass;
-    String getterMethod;
-    boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
-    ClassName keyClass = isEnumKey ? ClassName.get((Class<?>) keyType) : ParserCommonUtils.STRING;
+    final ClassName valueClass;
+    final String getterMethod;
+    final boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
+    final ClassName keyClass = isEnumKey ? ClassName.get((Class<?>) keyType) : ParserCommonUtils.STRING;
 
-    String fieldName = field.getName();
+    final String fieldName = field.getName();
 
     if (valueType.equals(Integer.class)) {
       valueClass = ClassName.get(Integer.class);
@@ -124,8 +124,8 @@ public class MapFieldParser implements FieldParser {
             ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
       }
 
-      code.unindent();
-      code.addStatement("})")
+      code.unindent()
+          .addStatement("})")
           .addStatement("config.set$L(map)", ParserCommonUtils.capitalize(fieldName));
       return;
     }
@@ -164,16 +164,16 @@ public class MapFieldParser implements FieldParser {
     }
 
     // Determine the map implementation based on the field's declared type
-    Class<?> declaredType = field.getType();
-    ClassName mapImpl;
+    final Class<?> declaredType = field.getType();
+    final ClassName mapImpl;
     if (declaredType.equals(HashMap.class)) {
       mapImpl = HASH_MAP;
     } else {
       mapImpl = LINKED_HASH_MAP; // Default to LinkedHashMap for Map interface and LinkedHashMap
     }
 
-    boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
-    ClassName keyClass = isEnumKey ? ClassName.get((Class<?>) keyType) : ParserCommonUtils.STRING;
+    final boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
+    final ClassName keyClass = isEnumKey ? ClassName.get((Class<?>) keyType) : ParserCommonUtils.STRING;
 
     // Handle different collection types
     if (rawType.equals(List.class)) {
@@ -233,7 +233,7 @@ public class MapFieldParser implements FieldParser {
         }
       } else if (elementType instanceof Class) {
         // Handle complex object types in lists
-        ClassName elementClass = ClassName.get((Class<?>) elementType);
+        final ClassName elementClass = ClassName.get((Class<?>) elementType);
         code.addStatement("final $T<$T, $T<$T>> map = new $T<>()",
             mapImpl, keyClass, LIST, elementClass, mapImpl);
 

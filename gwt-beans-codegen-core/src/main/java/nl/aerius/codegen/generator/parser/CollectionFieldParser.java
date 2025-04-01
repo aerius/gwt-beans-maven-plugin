@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -63,6 +64,7 @@ public class CollectionFieldParser implements FieldParser {
     final String fieldName = field.getName();
     // Get the generic type argument (e.g., String from List<String>)
     final Type genericType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+    final Class<?> elementType = (Class<?>) genericType;
 
     // Determine the appropriate collection implementation
     ClassName collectionImpl;
@@ -81,15 +83,22 @@ public class CollectionFieldParser implements FieldParser {
           objVarName,
           getterMethod,
           fieldName);
+    } else if (elementType.isEnum()) {
+      // Handle List<Enum> - using forEachString with valueOf
+      code.addStatement("final $T<$T> $L = new $T<>()", List.class, elementType, fieldName, ARRAY_LIST)
+          .add("$L.getArray($S).forEachString(str -> {\n", objVarName, fieldName)
+          .indent()
+          .addStatement("$L.add($T.valueOf(str))", fieldName, elementType)
+          .unindent()
+          .addStatement("})")
+          .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName);
     } else {
       // Handle complex element types that require custom parsing
-      String elementTypeName = ((Class<?>) genericType).getSimpleName();
+      final String elementTypeName = ((Class<?>) genericType).getSimpleName();
       code.addStatement("final $T<$T> $L = new $T<>()", collectionImpl, genericType, fieldName + "List", collectionImpl)
-          .beginControlFlow("for ($T element : $L.getArray($S))", ParserCommonUtils.getJSONObjectHandle(), objVarName,
-              fieldName)
-          .addStatement("$L.add($T.parse(element))", fieldName + "List",
+          .addStatement("$L.getArray($S).forEach(element -> $L.add($T.parse(element)))", 
+              objVarName, fieldName, fieldName + "List",
               ParserWriterUtils.determineParserClassName(elementTypeName, parserPackage))
-          .endControlFlow()
           .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName + "List");
     }
   }

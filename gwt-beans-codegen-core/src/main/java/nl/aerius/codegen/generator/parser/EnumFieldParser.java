@@ -36,7 +36,7 @@ public class EnumFieldParser implements FieldParser {
 
     // Common enum parsing logic for both primitive and object types
     code.beginControlFlow(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true))
-        .addStatement("$T $LStr = $L.getString($S)", String.class, fieldName, objVarName, fieldName)
+        .addStatement("final $T $LStr = $L.getString($S)", String.class, fieldName, objVarName, fieldName)
         .beginControlFlow("if ($LStr != null)", fieldName)
         .beginControlFlow("try")
         .addStatement("config.set$L($T.valueOf($LStr))", capitalizedFieldName, enumType, fieldName)

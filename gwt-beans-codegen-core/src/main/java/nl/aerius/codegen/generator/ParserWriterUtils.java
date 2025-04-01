@@ -195,7 +195,7 @@ public final class ParserWriterUtils {
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
         .returns(targetClassName)
-        .addParameter(ParserCommonUtils.STRING, "jsonText");
+        .addParameter(ParserCommonUtils.STRING, "jsonText", Modifier.FINAL);
 
     methodBuilder.beginControlFlow("if (jsonText == null)")
         .addStatement("return null")
@@ -210,7 +210,7 @@ public final class ParserWriterUtils {
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
         .returns(targetClassName)
-        .addParameter(ParserCommonUtils.getJSONObjectHandle(), "obj");
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), "obj", Modifier.FINAL);
 
     methodBuilder.beginControlFlow("if (obj == null)")
         .addStatement("return null")
