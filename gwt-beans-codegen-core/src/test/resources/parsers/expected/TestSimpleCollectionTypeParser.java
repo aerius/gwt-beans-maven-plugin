@@ -85,14 +85,20 @@ public class TestSimpleCollectionTypeParser {
 
     // Parse defaultHashSet
     if (obj.has("defaultHashSet") && !obj.isNull("defaultHashSet")) {
-      config.setDefaultHashSet(new HashSet<>(obj.getIntegerArray("defaultHashSet")));
+      final JSONArrayHandle level1Array = obj.getArray("defaultHashSet");
+      final Set<Integer> level1Set = new HashSet<>();
+      level1Array.forEach(level1Item -> {
+        final Integer level2value = (Integer) level1Item;
+        level1Set.add(level2value);
+      });
+      config.setDefaultHashSet(level1Set);
     }
 
     // Parse explicitHashSet
     if (obj.has("explicitHashSet") && !obj.isNull("explicitHashSet")) {
-      final JSONArrayHandle level1JsonArray = obj.getArray("explicitHashSet");
+      final JSONArrayHandle level1Array = obj.getArray("explicitHashSet");
       final Set<String> level1Set = new HashSet<>();
-      level1JsonArray.forEach(level1Item -> {
+      level1Array.forEach(level1Item -> {
         final String level2value = level1Item;
         level1Set.add(level2value);
       });

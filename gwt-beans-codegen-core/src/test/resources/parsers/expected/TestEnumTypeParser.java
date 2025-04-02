@@ -56,13 +56,14 @@ public class TestEnumTypeParser {
 
     // Parse nullableStatus
     if (obj.has("nullableStatus") && !obj.isNull("nullableStatus")) {
-      final String str = obj.getString("nullableStatus");
+      final String level1Str = obj.getString("nullableStatus");
       TestEnumType.Status level1Value = null;
-      if (str != null) {
+      if (level1Str != null) {
         try {
-          level1Value = TestEnumType.Status.valueOf(str);
+          level1Value = TestEnumType.Status.valueOf(level1Str);
         } catch (IllegalArgumentException e) {
-          // Leave value as null
+          // Match generated comment
+          // Invalid enum value "[level1Str]", leaving level1Value as null;
         }
       }
       config.setNullableStatus(level1Value);

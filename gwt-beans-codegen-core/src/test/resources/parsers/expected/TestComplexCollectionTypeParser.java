@@ -109,12 +109,21 @@ public class TestComplexCollectionTypeParser {
     // Parse integerKeyEnumMap
     if (obj.has("integerKeyEnumMap") && !obj.isNull("integerKeyEnumMap")) {
       final JSONObjectHandle mapObj = obj.getObject("integerKeyEnumMap");
-      final Map<Integer, TestEnumType.Status> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final Integer intKey = Integer.parseInt(key);
-        map.put(intKey, TestEnumType.Status.valueOf(mapObj.getString(key)));
+      final Map<Integer, TestEnumType.Status> level1Map = new LinkedHashMap<>();
+      mapObj.keySet().forEach(level1Key -> {
+        final Integer intKey = Integer.parseInt(level1Key);
+        final String level2Str = mapObj.getString(level1Key);
+        TestEnumType.Status level2Value = null;
+        if (level2Str != null) {
+          try {
+            level2Value = TestEnumType.Status.valueOf(level2Str);
+          } catch (IllegalArgumentException e) {
+            System.err.println("Warning: Invalid integerKeyEnumMap value enum: " + level2Str);
+          }
+        }
+        level1Map.put(intKey, level2Value);
       });
-      config.setIntegerKeyEnumMap(map);
+      config.setIntegerKeyEnumMap(level1Map);
     }
 
     // Parse integerKeyObjectMap

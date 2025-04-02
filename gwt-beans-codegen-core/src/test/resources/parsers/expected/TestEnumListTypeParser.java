@@ -68,7 +68,9 @@ public class TestEnumListTypeParser {
           try {
             level2Value = TestEnumType.Status.valueOf(level2Str);
           } catch (IllegalArgumentException e) {
-            /* ignore */ }
+            // Match generated comment
+            // Invalid enum value "[level2Str]", leaving level2Value as null;
+          }
         }
         level1Map.put(level1Key, level2Value);
       });

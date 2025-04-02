@@ -6,6 +6,9 @@ import javax.annotation.processing.Generated;
 import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.aerius.codegen.test.types.TestRootObjectType;
 import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
+import nl.aerius.codegen.test.types.ConcreteType;
+import nl.aerius.codegen.test.types.TestAdvancedMapType;
+import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestNestedMapType;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
@@ -75,17 +78,20 @@ public class TestRootObjectTypeParser {
 
     // Parse advancedMap
     if (obj.has("advancedMap") && !obj.isNull("advancedMap")) {
-      config.setAdvancedMap(TestAdvancedMapTypeParser.parse(obj.getObject("advancedMap")));
+      final TestAdvancedMapType level1Value = TestAdvancedMapTypeParser.parse(obj.getObject("advancedMap"));
+      config.setAdvancedMap(level1Value);
     }
 
     // Parse enumListType
     if (obj.has("enumListType") && !obj.isNull("enumListType")) {
-      config.setEnumListType(TestEnumListTypeParser.parse(obj.getObject("enumListType")));
+      final TestEnumListType level1Value = TestEnumListTypeParser.parse(obj.getObject("enumListType"));
+      config.setEnumListType(level1Value);
     }
 
     // Parse concreteType
     if (obj.has("concreteType") && !obj.isNull("concreteType")) {
-      config.setConcreteType(ConcreteTypeParser.parse(obj.getObject("concreteType")));
+      final ConcreteType level1Value = ConcreteTypeParser.parse(obj.getObject("concreteType"));
+      config.setConcreteType(level1Value);
     }
 
     // Parse nestedMapType
