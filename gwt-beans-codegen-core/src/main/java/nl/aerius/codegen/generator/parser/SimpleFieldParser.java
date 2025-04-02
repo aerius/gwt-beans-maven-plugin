@@ -98,9 +98,24 @@ public class SimpleFieldParser implements FieldParser {
           .addStatement("config.set$L(charStr.charAt(0))", ParserCommonUtils.capitalize(fieldName))
           .endControlFlow();
     } else if (getterMethod.equals("getNumber")) {
-      code.addStatement("config.set$L($L.$L($S).floatValue())", ParserCommonUtils.capitalize(fieldName), objVarName,
-          getterMethod,
-          fieldName);
+      if (fieldType.equals(float.class) || fieldType.equals(Float.class)) {
+        code.addStatement("config.set$L($L.$L($S).floatValue())", ParserCommonUtils.capitalize(fieldName), objVarName,
+            getterMethod,
+            fieldName);
+      } else if (fieldType.equals(int.class) || fieldType.equals(Integer.class)) {
+        code.addStatement("config.set$L($L.$L($S).intValue())", ParserCommonUtils.capitalize(fieldName), objVarName,
+            getterMethod,
+            fieldName);
+      } else if (fieldType.equals(long.class) || fieldType.equals(Long.class)) {
+        code.addStatement("config.set$L($L.$L($S).longValue())", ParserCommonUtils.capitalize(fieldName), objVarName,
+            getterMethod,
+            fieldName);
+      } else {
+        // For double, we can use the number directly
+        code.addStatement("config.set$L($L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName,
+            getterMethod,
+            fieldName);
+      }
     } else {
       code.addStatement("config.set$L($L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName, getterMethod,
           fieldName);
