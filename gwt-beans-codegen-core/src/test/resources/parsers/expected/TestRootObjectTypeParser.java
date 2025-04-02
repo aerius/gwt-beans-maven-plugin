@@ -5,6 +5,7 @@ import javax.annotation.processing.Generated;
 import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.aerius.codegen.test.types.TestRootObjectType;
 import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
+import nl.aerius.codegen.test.types.ConcreteTypeParser;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestRootObjectTypeParser {
@@ -71,6 +72,11 @@ public class TestRootObjectTypeParser {
     // Parse enumListType
     if (obj.has("enumListType")) {
       config.setEnumListType(TestEnumListTypeParser.parse(obj.getObject("enumListType")));
+    }
+
+    // Parse concreteType
+    if (obj.has("concreteType")) {
+      config.setConcreteType(ConcreteTypeParser.parse(obj.getObject("concreteType")));
     }
 
     return config;

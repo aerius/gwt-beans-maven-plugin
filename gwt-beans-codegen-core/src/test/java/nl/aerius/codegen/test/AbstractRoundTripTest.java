@@ -177,6 +177,6 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
     assertEquals(
         originalTree,
         parsedTree,
-        "JSON should match after round trip.\nOriginal: " + originalJson + "\nParsed: " + parsedJson);
+        "JSON should match after round trip.\nOriginal: " + originalJson + "\nParsed:   " + parsedJson);
   }
 }
