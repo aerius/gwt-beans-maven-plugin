@@ -12,7 +12,7 @@ import com.palantir.javapoet.CodeBlock;
 public class EnumFieldParser implements TypeParser {
   @Override
   public boolean canHandle(Field field) {
-    return canHandle(field.getType());
+    return canHandle(field.getGenericType());
   }
 
   @Override
@@ -24,52 +24,63 @@ public class EnumFieldParser implements TypeParser {
   }
 
   @Override
+  @Deprecated
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    return generateParsingCode(field.getType(), objVarName, parserPackage, field.getName());
+    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
   }
 
   @Override
+  @Deprecated
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
-    return generateParsingCode(field.getType(), objVarName, parserPackage, fieldName);
+    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, fieldName);
   }
 
   @Override
+  @Deprecated
   public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage) {
     return generateParsingCode(type, objVarName, parserPackage, "value");
   }
 
   @Override
+  @Deprecated
   public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
     if (!(type instanceof Class<?>)) {
-      throw new IllegalArgumentException("EnumFieldParser only handles Class types");
+      throw new IllegalArgumentException("EnumFieldParser only handles Class types (Deprecated Method)");
+    }
+    CodeBlock.Builder code = CodeBlock.builder();
+    CodeBlock accessExpression = ParserCommonUtils.createFieldAccessCode(type, objVarName, CodeBlock.of("$S", fieldName));
+
+    code.add(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true, innerCode -> {
+      String resultVar = generateParsingCodeInto(innerCode, type, objVarName, parserPackage, accessExpression, 1);
+      innerCode.addStatement("// Assign result: config.set$L($L);", ParserCommonUtils.capitalize(fieldName), resultVar);
+    }));
+    return code.build();
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level) {
+    if (!canHandle(type)) {
+      throw new IllegalArgumentException("EnumFieldParser cannot handle type: " + type.getTypeName());
     }
     Class<?> enumClass = (Class<?>) type;
-    final CodeBlock.Builder code = CodeBlock.builder();
+    String resultVarName = "level" + level + "Value";
+    String tempStringVar = "level" + level + "Str";
 
-    // Create proper ClassName for the enum type
-    final ClassName enumType;
-    if (enumClass.isMemberClass()) {
-      // For inner enums, we need to include the enclosing class
-      Class<?> enclosingClass = enumClass.getEnclosingClass();
-      enumType = ClassName.get(enclosingClass.getPackage().getName(),
-          enclosingClass.getSimpleName(),
-          enumClass.getSimpleName());
-    } else {
-      enumType = ClassName.get(enumClass);
-    }
+    final ClassName enumType = ClassName.get(enumClass);
 
-    // Common enum parsing logic for both primitive and object types
-    code.beginControlFlow("if ($L.has($S) && !$L.isNull($S))", objVarName, fieldName, objVarName, fieldName)
-        .addStatement("final $T $LStr = $L.getString($S)", String.class, fieldName, objVarName, fieldName)
-        .beginControlFlow("if ($LStr != null)", fieldName)
-        .beginControlFlow("try")
-        .addStatement("config.set$L($T.valueOf($LStr))", ParserCommonUtils.capitalize(fieldName), enumType, fieldName)
-        .nextControlFlow("catch ($T e)", IllegalArgumentException.class)
-        .add("// Invalid enum value, leave as default\n")
-        .endControlFlow()
-        .endControlFlow()
-        .endControlFlow();
+    code.addStatement("final $T $L = $L", String.class, tempStringVar, accessExpression);
 
-    return code.build();
+    code.addStatement("final $T $L = null", enumType, resultVarName);
+
+    code.beginControlFlow("if ($L != null)", tempStringVar);
+    code.beginControlFlow("try");
+    code.addStatement("$L = $T.valueOf($L)", resultVarName, enumType, tempStringVar);
+    code.nextControlFlow("catch ($T e)", IllegalArgumentException.class);
+    code.addStatement("// Invalid enum value $S, leaving $L as null", "[" + tempStringVar + "]", resultVarName);
+    code.endControlFlow();
+    code.endControlFlow();
+
+    return resultVarName;
   }
 }

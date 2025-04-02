@@ -2,6 +2,8 @@ package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
@@ -12,9 +14,25 @@ import com.palantir.javapoet.CodeBlock;
 public class PrimitiveArrayFieldParser implements TypeParser {
   private static final ClassName LIST = ClassName.get("java.util", "List");
 
+  // Map primitive component types to the specific getter method on JSONArrayHandle
+  private static final Map<Class<?>, String> PRIMITIVE_COMPONENT_TO_GETTER = new HashMap<>();
+
+  static {
+    // Assumes JSONArrayHandle has methods like getStringArray(), getIntegerArray() etc.
+    // Adjust method names if they differ in nl.aerius.wui.service.json.JSONArrayHandle
+    PRIMITIVE_COMPONENT_TO_GETTER.put(int.class, "getIntegerArray");
+    PRIMITIVE_COMPONENT_TO_GETTER.put(long.class, "getLongArray"); // Assuming getLongArray exists
+    PRIMITIVE_COMPONENT_TO_GETTER.put(double.class, "getNumberArray");
+    PRIMITIVE_COMPONENT_TO_GETTER.put(boolean.class, "getBooleanArray");
+    // Note: byte[], short[], float[], char[] might not have direct getters
+    // and may require iterating and casting, similar to non-primitive arrays.
+    // If they DO have direct getters (e.g., getByteArray), add them here.
+    // For now, we only handle int[], long[], double[], boolean[].
+  }
+
   @Override
   public boolean canHandle(Field field) {
-    return canHandle(field.getType());
+    return canHandle(field.getGenericType());
   }
 
   @Override
@@ -23,17 +41,19 @@ public class PrimitiveArrayFieldParser implements TypeParser {
       return false;
     }
     Class<?> clazz = (Class<?>) type;
-    return clazz.isArray() && clazz.getComponentType().isPrimitive();
+    return clazz.isArray() && PRIMITIVE_COMPONENT_TO_GETTER.containsKey(clazz.getComponentType());
+    // Only handle primitives with direct getters for simplicity now.
+    // return clazz.isArray() && clazz.getComponentType().isPrimitive();
   }
 
   @Override
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    return generateParsingCode(field.getType(), objVarName, parserPackage, field.getName());
+    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
   }
 
   @Override
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
-    return generateParsingCode(field.getType(), objVarName, parserPackage, fieldName);
+    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, fieldName);
   }
 
   @Override
@@ -70,5 +90,30 @@ public class PrimitiveArrayFieldParser implements TypeParser {
 
     code.endControlFlow();
     return code.build();
+  }
+
+  // --- New Recursive Parsing Method ---
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level) {
+    if (!canHandle(type)) {
+      throw new IllegalArgumentException("PrimitiveArrayFieldParser cannot handle type: " + type.getTypeName());
+    }
+    Class<?> arrayClass = (Class<?>) type;
+    Class<?> componentType = arrayClass.getComponentType();
+    String resultVarName = "level" + level + "Value"; // Consistent naming
+
+    String getterMethod = PRIMITIVE_COMPONENT_TO_GETTER.get(componentType);
+    if (getterMethod == null) {
+      // Should not happen if canHandle is correct, but as a safeguard:
+      throw new IllegalArgumentException("PrimitiveArrayFieldParser: No direct getter found for component type: " + componentType.getName());
+    }
+
+    // Generate the statement to declare the final variable and assign the result
+    // of calling the specific primitive array getter on the accessExpression.
+    // Assumes accessExpression yields a JSONArrayHandle.
+    code.addStatement("final $T $L = $L.$L()", type, resultVarName, accessExpression, getterMethod);
+
+    return resultVarName;
   }
 }

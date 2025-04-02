@@ -2,6 +2,7 @@ package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -16,8 +17,9 @@ import com.palantir.javapoet.CodeBlock;
  * Common utilities for parser generation.
  */
 public final class ParserCommonUtils {
-  // JSON handling constants - Always use the AERIUS JSONObjectHandle
+  // JSON handling constants - Always use the AERIUS JSONObjectHandle and JSONArrayHandle
   private static final ClassName JSON_OBJECT_HANDLE = ClassName.get("nl.aerius.wui.service.json", "JSONObjectHandle");
+  private static final ClassName JSON_ARRAY_HANDLE = ClassName.get("nl.aerius.wui.service.json", "JSONArrayHandle");
 
   // Java standard types
   public static final ClassName STRING = ClassName.get(String.class);
@@ -32,6 +34,13 @@ public final class ParserCommonUtils {
   public static ClassName getJSONObjectHandle() {
     // Always return the AERIUS JSONObjectHandle
     return JSON_OBJECT_HANDLE;
+  }
+
+  /**
+   * Gets the JSON array handle class.
+   */
+  public static ClassName getJSONArrayHandle() {
+    return JSON_ARRAY_HANDLE;
   }
 
   public static ClassName getHashMap() {
@@ -69,10 +78,12 @@ public final class ParserCommonUtils {
    */
   public static CodeBlock createFieldExistsCheck(String objVarName, String fieldName, boolean requireNonNull, Consumer<CodeBlock.Builder> body) {
     final CodeBlock.Builder code = CodeBlock.builder();
+    // Use CodeBlock for fieldName to handle potential variables vs String literals if needed later
+    CodeBlock fieldNameBlock = CodeBlock.of("$S", fieldName);
     if (requireNonNull) {
-      code.beginControlFlow("if ($L.has($S) && !$L.isNull($S))", objVarName, fieldName, objVarName, fieldName);
+      code.beginControlFlow("if ($L.has($L) && !$L.isNull($L))", objVarName, fieldNameBlock, objVarName, fieldNameBlock);
     } else {
-      code.beginControlFlow("if ($L.has($S))", objVarName, fieldName);
+      code.beginControlFlow("if ($L.has($L))", objVarName, fieldNameBlock);
     }
     body.accept(code);
     code.endControlFlow();
@@ -90,35 +101,63 @@ public final class ParserCommonUtils {
   }
 
   /**
+   * Generates a variable name based on the nesting level.
+   * Level 1 uses the base suffix directly (e.g., "value", "map").
+   * Levels > 1 prepend "levelN" (e.g., "level2Value", "level3Map").
+   *
+   * @param level       The nesting level (must be >= 1).
+   * @param baseSuffix  The base name suffix (e.g., "Value", "Map", "List", "Obj", "Key").
+   * @return The generated variable name.
+   * @throws IllegalArgumentException if level < 1.
+   */
+  public static String getVariableNameForLevel(int level, String baseSuffix) {
+    if (level < 1) {
+      throw new IllegalArgumentException("Level cannot be less than 1");
+    }
+    if (level == 1) {
+      // For level 1 (top-level or first nesting), use simple names
+      // We need to ensure baseSuffix is appropriately lowerCamelCase if needed.
+      // Let's assume the caller provides the correct case for level 1.
+      // e.g., getVariableNameForLevel(1, "value") -> "value"
+      // e.g., getVariableNameForLevel(1, "map") -> "map"
+      // e.g., getVariableNameForLevel(1, "mapObj") -> "mapObj"
+      return baseSuffix;
+    } else {
+      // For deeper levels, prepend "levelN"
+      return "level" + level + baseSuffix;
+    }
+  }
+
+  /**
    * Creates a CodeBlock representing the access to a field's data within a JSONObjectHandle.
    * Determines the correct getter method (getObject, getString, getInteger, getArray, etc.)
    * based on the provided type.
    *
-   * @param type        The Type of the data being accessed.
-   * @param objVarName  The variable name of the JSONObjectHandle.
-   * @param fieldName   The name of the field (key) in the JSON object.
-   * @return A CodeBlock like `objVar.getObject("fieldName")` or `objVar.getString("fieldName")`.
+   * @param type                     The Type of the data being accessed.
+   * @param objVarName               The variable name of the JSONObjectHandle.
+   * @param keyOrFieldNameExpression A CodeBlock representing the key or field name (e.g., "fieldName" or a variable like levelXKey).
+   * @return A CodeBlock like `objVar.getObject(keyOrFieldNameExpression)` or `objVar.getString(keyOrFieldNameExpression)`.
    */
-  public static CodeBlock createFieldAccessCode(Type type, String objVarName, String fieldName) {
+  public static CodeBlock createFieldAccessCode(Type type, String objVarName, CodeBlock keyOrFieldNameExpression) {
     if (type instanceof Class<?>) {
       Class<?> clazz = (Class<?>) type;
       if (clazz.equals(String.class)) {
-        return CodeBlock.of("$L.getString($S)", objVarName, fieldName);
+        return CodeBlock.of("$L.getString($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Integer.class) || clazz.equals(int.class)) {
-        return CodeBlock.of("$L.getInteger($S)", objVarName, fieldName);
+        return CodeBlock.of("$L.getInteger($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Double.class) || clazz.equals(double.class)) {
-        return CodeBlock.of("$L.getNumber($S)", objVarName, fieldName);
+        return CodeBlock.of("$L.getNumber($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Boolean.class) || clazz.equals(boolean.class)) {
-        return CodeBlock.of("$L.getBoolean($S)", objVarName, fieldName);
+        return CodeBlock.of("$L.getBoolean($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.isEnum()) {
-        // Enums are typically stored as strings
-        return CodeBlock.of("$L.getString($S)", objVarName, fieldName);
+        // Enums are typically stored as strings, the parser will handle valueOf
+        return CodeBlock.of("$L.getString($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.isArray()) {
-        // Assume primitive arrays need getArray (might need specific getters like getIntArray later)
-        return CodeBlock.of("$L.getArray($S)", objVarName, fieldName);
+        // JSON arrays correspond to getArray
+        return CodeBlock.of("$L.getArray($L)", objVarName, keyOrFieldNameExpression);
       } else {
-        // Default to getObject for complex objects or unknown types
-        return CodeBlock.of("$L.getObject($S)", objVarName, fieldName);
+        // Default to getObject for complex objects or unknown types that aren't collections/maps
+        return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
       }
     } else if (type instanceof ParameterizedType) {
       ParameterizedType paramType = (ParameterizedType) type;
@@ -127,17 +166,19 @@ public final class ParserCommonUtils {
         Class<?> rawClass = (Class<?>) rawType;
         if (Map.class.isAssignableFrom(rawClass)) {
           // Maps are represented as JSON objects
-          return CodeBlock.of("$L.getObject($S)", objVarName, fieldName);
-        } else if (List.class.isAssignableFrom(rawClass)) {
+          return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
+        } else if (List.class.isAssignableFrom(rawClass) || Collection.class.isAssignableFrom(rawClass)) {
           // Lists/Collections are represented as JSON arrays
-          return CodeBlock.of("$L.getArray($S)", objVarName, fieldName);
+          return CodeBlock.of("$L.getArray($L)", objVarName, keyOrFieldNameExpression);
         }
       }
-      // Default for other parameterized types (if any supported)
-      return CodeBlock.of("$L.getObject($S)", objVarName, fieldName);
+      // Default for other parameterized types (assume object)
+      return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
     }
 
-    // Fallback for other types (like TypeVariable, WildcardType)
-    return CodeBlock.of("$L.get($S) /* Unknown type $L */", objVarName, fieldName, type.getTypeName());
+    // Fallback for other types (like TypeVariable, WildcardType) - default to getObject
+    // Log warning or throw error might be better long-term
+    System.err.println("Warning: Defaulting to getObject() for unknown type in createFieldAccessCode: " + type.getTypeName());
+    return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
   }
 }

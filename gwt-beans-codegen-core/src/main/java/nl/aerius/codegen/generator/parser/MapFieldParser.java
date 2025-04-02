@@ -57,7 +57,7 @@ public class MapFieldParser implements TypeParser {
     CodeBlock.Builder code = CodeBlock.builder();
     CodeBlock accessExpression;
     if (fieldName != null) {
-      accessExpression = CodeBlock.of("$L.getObject($S)", objVarName, fieldName);
+      accessExpression = ParserCommonUtils.createFieldAccessCode(type, objVarName, CodeBlock.of("$S", fieldName));
       code.add(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true, innerCode -> {
         String resultVar = generateParsingCodeInto(innerCode, type, objVarName, parserPackage, accessExpression, 1);
         innerCode.addStatement("// Assign the result: config.set$L($L);", ParserCommonUtils.capitalize(fieldName), resultVar);
@@ -91,13 +91,18 @@ public class MapFieldParser implements TypeParser {
     code.add("$L.keySet().forEach($L -> {\n", levelObjVar, levelKeyVar)
         .indent();
 
+    CodeBlock valueAccessExpression = ParserCommonUtils.createFieldAccessCode(
+        valueType,
+        levelObjVar,
+        CodeBlock.of("$L", levelKeyVar));
+
     String valueVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
         code,
         valueType,
         levelObjVar,
         parserPackage,
-        CodeBlock.of("$L", levelKeyVar),
-        level + 1);
+        valueAccessExpression,
+            level + 1);
 
     addPutStatement(code, levelMapVar, keyType, levelKeyVar, valueVarName);
 

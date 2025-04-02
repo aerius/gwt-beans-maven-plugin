@@ -56,7 +56,7 @@ public class SimpleFieldParser implements TypeParser {
 
   @Override
   public boolean canHandle(Field field) {
-    return canHandle(field.getType());
+    return canHandle(field.getGenericType());
   }
 
   @Override
@@ -72,12 +72,12 @@ public class SimpleFieldParser implements TypeParser {
 
   @Override
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    return generateParsingCode(field.getType(), objVarName, parserPackage, field.getName());
+    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
   }
 
   @Override
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
-    return generateParsingCode(field.getType(), objVarName, parserPackage, fieldName);
+    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, fieldName);
   }
 
   @Override
@@ -147,6 +147,49 @@ public class SimpleFieldParser implements TypeParser {
     } else {
       code.addStatement("config.set$L($L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName, getterMethod,
           fieldName);
+    }
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level) {
+    if (!canHandle(type)) {
+      throw new IllegalArgumentException("SimpleFieldParser cannot handle type: " + type.getTypeName());
+    }
+    Class<?> clazz = (Class<?>) type;
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
+    String tempStringVar = ParserCommonUtils.getVariableNameForLevel(level, "str"); // For char handling
+
+    if (clazz.equals(char.class) || clazz.equals(Character.class)) {
+      // Special handling for char/Character
+      code.addStatement("final String $L = $L", tempStringVar, accessExpression); // accessExpression should yield String here
+      // Declare the final char variable, initialized carefully
+      if (clazz.equals(Character.class)) {
+        code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : null",
+            clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
+      } else { // char primitive
+        code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : '\u0000'",
+            clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
+      }
+    } else {
+      // Handle all other simple types using the helper
+      CodeBlock assignment = createAssignmentExpression(clazz, accessExpression);
+      code.addStatement("final $T $L = $L", type, resultVarName, assignment);
+    }
+
+    return resultVarName;
+  }
+
+  private CodeBlock createAssignmentExpression(Class<?> targetType, CodeBlock accessExpression) {
+    if (targetType.equals(byte.class) || targetType.equals(Byte.class)) {
+      return CodeBlock.of("(byte) $L", accessExpression);
+    } else if (targetType.equals(short.class) || targetType.equals(Short.class)) {
+      return CodeBlock.of("(short) $L", accessExpression);
+    } else if (targetType.equals(float.class) || targetType.equals(Float.class)) {
+      return CodeBlock.of("$L.floatValue()", accessExpression);
+    } else {
+      // String, Integer, Long, Double, Boolean
+      return accessExpression;
     }
   }
 }

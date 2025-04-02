@@ -296,10 +296,12 @@ public final class ParserWriterUtils {
         methodBuilder.addCode("\n");
         methodBuilder.addComment("Parse $L", field.getName());
         methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck("obj", field.getName(), true, innerCode -> {
-          CodeBlock accessExpression = CodeBlock.of("obj.get($S) /* TODO: Use specific getter (getObject, getString, etc) based on field type? */",
-              field.getName());
           // Refined access: Use specific getter based on broad type category if possible before dispatch
-          CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(field.getGenericType(), "obj", field.getName());
+          // Pass CodeBlock representing the field name string literal
+          CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
+              field.getGenericType(),
+              "obj",
+              CodeBlock.of("$S", field.getName()));
 
           String resultVar = dispatchGenerateParsingCodeInto(
               innerCode,
@@ -347,4 +349,4 @@ public final class ParserWriterUtils {
     // throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
     return placeholderVar;
   }
-     }
+}
