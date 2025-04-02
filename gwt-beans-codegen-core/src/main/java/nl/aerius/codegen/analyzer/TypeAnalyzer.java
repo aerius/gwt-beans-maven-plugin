@@ -222,7 +222,8 @@ public class TypeAnalyzer {
     }
     return !type.isPrimitive()
         && !primitiveWrappers.contains(type)
-        && !type.getName().startsWith("java.");
+        && !type.getName().startsWith("java.")
+        && !type.equals(Object.class);
   }
 
   private void addTypeForGeneration(final Class<?> type) {

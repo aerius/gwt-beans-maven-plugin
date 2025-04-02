@@ -159,6 +159,10 @@ public class MapFieldParser implements FieldParser {
     } else {
       // Handle custom object types
       valueClass = ClassName.get((Class<?>) valueType);
+      if (valueClass.equals(ClassName.get(Object.class))) {
+        code.addStatement("// Map value type 'java.lang.Object' is not supported - Use a specific type instead");
+        return;
+      }
       code.addStatement("final $T<$T, $T> map = new $T<>()", declaredType, keyClass, valueClass, mapImpl)
           .add("mapObj.keySet().forEach(key -> {\n")
           .indent()
