@@ -33,7 +33,7 @@ public class ConcreteTypeParser {
     // Parse fields from parent class (AbstractMiddleType)
     AbstractMiddleTypeParser.parse(obj, config);
 
-    // Parse fields specific to ConcreteType
+    // Parse outer
     if (obj.has("outer")) {
       config.setOuter(obj.getString("outer"));
     }

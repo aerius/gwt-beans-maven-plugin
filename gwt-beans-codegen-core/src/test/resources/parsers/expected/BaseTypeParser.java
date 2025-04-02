@@ -29,11 +29,9 @@ public class BaseTypeParser {
       return;
     }
     
-    // Parse fields specific to BaseType
+    // Parse deepest
     if (obj.has("deepest")) {
       config.setDeepest(obj.getString("deepest"));
     }
-    
-    // No parent class to parse (BaseType is at the top of the hierarchy)
   }
 } 

@@ -132,6 +132,12 @@ public class TypeAnalyzer {
       System.out.println("Skipping parser generation for " + type.getName() + " (has custom parser)");
     }
 
+    // Find and process superclasses
+    Class<?> superclass = type.getSuperclass();
+    if (superclass != null && superclass != Object.class) {
+      analyzeTypeAndSubtypes(superclass);
+    }
+
     // Find and process subtypes
     try (ScanResult scanResult = new ClassGraph()
         .enableClassInfo()

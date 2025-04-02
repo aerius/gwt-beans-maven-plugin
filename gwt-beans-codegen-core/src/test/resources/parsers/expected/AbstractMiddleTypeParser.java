@@ -19,8 +19,7 @@ public class AbstractMiddleTypeParser {
       return null;
     }
 
-    // Since AbstractMiddleType is abstract, we can't create an instance directly
-    // This method would typically be overridden by concrete subclasses
+    // Cannot instantiate abstract class
     throw new UnsupportedOperationException("Cannot create an instance of an abstract class");
   }
 
@@ -32,7 +31,7 @@ public class AbstractMiddleTypeParser {
     // Parse fields from parent class (BaseType)
     BaseTypeParser.parse(obj, config);
 
-    // Parse fields specific to AbstractMiddleType
+    // Parse middle
     if (obj.has("middle")) {
       config.setMiddle(obj.getString("middle"));
     }
