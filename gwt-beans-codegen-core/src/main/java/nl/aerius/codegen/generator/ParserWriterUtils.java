@@ -105,7 +105,6 @@ public final class ParserWriterUtils {
         .build();
 
     final Path outputPath = Paths.get(outputDir, className + ".java");
-    System.out.println("Writing parser to: " + outputPath.toAbsolutePath());
 
     Files.createDirectories(Paths.get(outputDir));
     Files.writeString(outputPath, javaFile.toString());

@@ -13,7 +13,6 @@ import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -25,8 +24,6 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.palantir.javapoet.ClassName;
 
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ScanResult;
 import nl.aerius.codegen.util.FileUtils;
 
 /**
@@ -124,6 +121,12 @@ public class TypeAnalyzer {
       return; // Already processed
     }
 
+    // Print the class hierarchy if we haven't seen this type before
+    if (!printedTypes.contains(type.getName())) {
+      printClassHierarchy(type);
+      printedTypes.add(type.getName());
+    }
+
     // If this type has a custom parser, skip adding it for generation
     // but continue analyzing its fields and subtypes
     if (!hasCustomParser(type)) {
@@ -139,6 +142,8 @@ public class TypeAnalyzer {
     }
 
     // Find and process subtypes
+    // Commented out to make subclass generation more deliberate
+    /*
     try (ScanResult scanResult = new ClassGraph()
         .enableClassInfo()
         .acceptPackages("nl.aerius", "nl.overheid.aerius")
@@ -146,6 +151,7 @@ public class TypeAnalyzer {
       final List<Class<?>> subtypes = scanResult.getSubclasses(type.getName()).loadClasses();
       subtypes.forEach(this::analyzeTypeAndSubtypes);
     }
+    */
 
     // Always analyze fields, even for types with custom parsers
     // This ensures we discover all types that might need parsers
@@ -290,5 +296,27 @@ public class TypeAnalyzer {
       System.out.println("Found custom parser for type: " + type.getName());
     }
     return hasParser;
+  }
+
+  private void printClassHierarchy(final Class<?> type) {
+    if (type.isEnum()) {
+      return;
+    }
+
+    StringBuilder hierarchy = new StringBuilder();
+    Class<?> current = type;
+    int length = 0;
+    while (current != null && current != Object.class) {
+      if (hierarchy.length() > 0) {
+        hierarchy.append(" -> ");
+      }
+      hierarchy.append(current.getSimpleName());
+      current = current.getSuperclass();
+      length++;
+    }
+    
+    if (length > 1) {
+      System.out.println("Class hierarchy: " + hierarchy);
+    }
   }
 }
