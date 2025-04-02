@@ -19,25 +19,33 @@ public interface TypeParser extends FieldParser {
     boolean canHandle(Type type);
 
     /**
-     * Generates code to parse a value of the given type from a JSON object.
-     * This is the new type-based parsing method that supports nested types.
-     * 
-     * @param type          The type to generate parsing code for
-     * @param objVarName    The name of the JSON object variable
-     * @param parserPackage The package where generated parsers are located
-     * @return The generated code block
+     * @deprecated Use generateParsingCodeInto instead for recursive generation.
      */
+    @Deprecated
     CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage);
 
     /**
-     * Generates code to parse a value of the given type from a JSON object.
-     * This is the new type-based parsing method that supports nested types.
-     * 
-     * @param type          The type to generate parsing code for
-     * @param objVarName    The name of the JSON object variable
-     * @param parserPackage The package where generated parsers are located
-     * @param fieldName     The name of the field being parsed, or null if parsing a type directly
-     * @return The generated code block
+     * @deprecated Use generateParsingCodeInto instead for recursive generation.
      */
+    @Deprecated
     CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName);
+
+    /**
+     * Generates code to parse the given type and appends it to the builder.
+     *
+     * @param code             The CodeBlock.Builder to add generated code to.
+     * @param type             The Type to parse.
+     * @param objVarName       The variable name of the parent JSONObjectHandle.
+     * @param parserPackage    The package for generated parsers.
+     * @param accessExpression A CodeBlock representing how to access the raw JSON data
+     *                         for this type from the objVarName (e.g., obj.getObject("fieldName"),
+     *                         parentObj.getObject(keyVar), parentArray.getObject(indexVar)).
+     *                         For top-level fields, this might be obj.get("fieldName").
+     *                         For map values, this should be accessing the parent map's object via the key.
+     *                         For list elements, this should be accessing the parent array via index.
+     * @param level            The current nesting level (for variable scoping, starting at 1).
+     * @return The name of the variable declared within the generated code block
+     *         that holds the final parsed value.
+     */
+    String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression, int level);
 } 

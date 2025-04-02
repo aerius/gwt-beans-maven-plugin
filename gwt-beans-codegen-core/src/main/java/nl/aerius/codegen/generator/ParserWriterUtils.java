@@ -25,6 +25,7 @@ import nl.aerius.codegen.generator.parser.MapFieldParser;
 import nl.aerius.codegen.generator.parser.ParserCommonUtils;
 import nl.aerius.codegen.generator.parser.PrimitiveArrayFieldParser;
 import nl.aerius.codegen.generator.parser.SimpleFieldParser;
+import nl.aerius.codegen.generator.parser.TypeParser;
 
 /**
  * Utility class containing shared code for parser generation.
@@ -36,13 +37,23 @@ public final class ParserWriterUtils {
   private static final Map<Type, String> ELEMENT_TYPE_TO_ARRAY_GETTER = new HashMap<>();
 
   // Field parsers
-  private static final SimpleFieldParser SIMPLE_FIELD_PARSER = new SimpleFieldParser();
-  private static final EnumFieldParser ENUM_FIELD_PARSER = new EnumFieldParser();
-  private static final CollectionFieldParser COLLECTION_FIELD_PARSER = new CollectionFieldParser();
-  private static final MapFieldParser MAP_FIELD_PARSER = new MapFieldParser();
-  private static final PrimitiveArrayFieldParser PRIMITIVE_ARRAY_FIELD_PARSER = new PrimitiveArrayFieldParser();
-  private static final CustomObjectFieldParser CUSTOM_OBJECT_FIELD_PARSER = new CustomObjectFieldParser(
+  private static final TypeParser SIMPLE_FIELD_PARSER = new SimpleFieldParser();
+  private static final TypeParser ENUM_FIELD_PARSER = new EnumFieldParser();
+  private static final TypeParser COLLECTION_FIELD_PARSER = new CollectionFieldParser();
+  private static final TypeParser MAP_FIELD_PARSER = new MapFieldParser();
+  private static final TypeParser PRIMITIVE_ARRAY_FIELD_PARSER = new PrimitiveArrayFieldParser();
+  private static final TypeParser CUSTOM_OBJECT_FIELD_PARSER = new CustomObjectFieldParser(
       customParserImports);
+
+  // Array for easy iteration in dispatcher
+  private static final TypeParser[] PARSERS = {
+      SIMPLE_FIELD_PARSER,
+      ENUM_FIELD_PARSER,
+      MAP_FIELD_PARSER,
+      COLLECTION_FIELD_PARSER,
+      PRIMITIVE_ARRAY_FIELD_PARSER,
+      CUSTOM_OBJECT_FIELD_PARSER
+  };
 
   static {
     // Initialize element type to array getter method mapping
@@ -168,7 +179,17 @@ public final class ParserWriterUtils {
         return determineParserClassName((Class<?>) rawType, parserPackage);
       }
     }
-    throw new IllegalArgumentException("Cannot determine parser class name for type: " + type.getTypeName());
+    // Fallback for complex types - might need refinement
+    String typeName = type.getTypeName();
+    // Basic attempt to get a simple name
+    if (typeName.contains("<")) {
+      typeName = typeName.substring(0, typeName.indexOf('<'));
+    }
+    if (typeName.contains(".")) {
+      typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
+    }
+    return determineParserClassName(typeName, parserPackage);
+    // throw new IllegalArgumentException("Cannot determine parser class name for type: " + type.getTypeName());
   }
 
   /**
@@ -274,61 +295,56 @@ public final class ParserWriterUtils {
           && !field.isSynthetic()) {
         methodBuilder.addCode("\n");
         methodBuilder.addComment("Parse $L", field.getName());
-        methodBuilder.addCode(generateFieldParsingCode(field, "obj", parserPackage));
+        methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck("obj", field.getName(), true, innerCode -> {
+          CodeBlock accessExpression = CodeBlock.of("obj.get($S) /* TODO: Use specific getter (getObject, getString, etc) based on field type? */",
+              field.getName());
+          // Refined access: Use specific getter based on broad type category if possible before dispatch
+          CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(field.getGenericType(), "obj", field.getName());
+
+          String resultVar = dispatchGenerateParsingCodeInto(
+              innerCode,
+              field.getGenericType(),
+              "obj", // Top level object
+              parserPackage,
+              fieldAccess, // Pass the code to access the field's data
+              1 // Start top-level fields at level 1
+          );
+          innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
+        }));
       }
     }
 
     return methodBuilder.build();
   }
 
-  private static CodeBlock generateFieldParsingCode(Field field, String objVarName, String parserPackage) {
-    // Delegate to type-based parsing for backward compatibility
-    return generateTypeParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
-  }
-
   /**
-   * Generates code to parse a value of the given type from a JSON object.
-   * This is the new type-based parsing method that supports nested types.
+   * Dispatches parsing logic to the appropriate TypeParser based on the given type.
+   *
+   * @param code             The CodeBlock.Builder to add generated code to.
+   * @param type             The Type to parse.
+   * @param objVarName       The variable name of the *parent* JSONObjectHandle containing the data.
+   * @param parserPackage    The package for generated parsers.
+   * @param accessExpression A CodeBlock representing how to access the raw JSON data
+   *                         for this type from the objVarName (e.g., "keyVar", "indexVar", or for top-level fields,
+   *                         an expression like obj.getObject("fieldName")).
+   * @param level            The current nesting level (for variable scoping).
+   * @return The name of the variable declared within the generated code block
+   *         that holds the final parsed value.
    */
-  private static CodeBlock generateTypeParsingCode(Type type, String objVarName, String parserPackage) {
-    return generateTypeParsingCode(type, objVarName, parserPackage, null);
+  public static String dispatchGenerateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage,
+      CodeBlock accessExpression, int level) {
+    for (TypeParser parser : PARSERS) {
+      if (parser.canHandle(type)) {
+        // Found a handler, delegate to its generateParsingCodeInto method
+        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level);
+      }
+    }
+
+    // If no parser handled the type, add a placeholder or throw an error
+    String placeholderVar = "level" + level + "UnsupportedValue";
+    code.addStatement("$T $L = null; // Type not supported: $L", Object.class, placeholderVar, type.getTypeName());
+    // Alternatively, throw an exception:
+    // throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
+    return placeholderVar;
   }
-
-  /**
-   * Generates code to parse a value of the given type from a JSON object.
-   * This is the new type-based parsing method that supports nested types.
-   */
-  private static CodeBlock generateTypeParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
-    // Try the SimpleFieldParser first
-    if (SIMPLE_FIELD_PARSER.canHandle(type)) {
-      return SIMPLE_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
-    }
-
-    // Try the EnumFieldParser
-    if (ENUM_FIELD_PARSER.canHandle(type)) {
-      return ENUM_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
-    }
-
-    // Try the CollectionFieldParser (includes object arrays)
-    if (COLLECTION_FIELD_PARSER.canHandle(type)) {
-      return COLLECTION_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
-    }
-
-    // Try the MapFieldParser
-    if (MAP_FIELD_PARSER.canHandle(type)) {
-      return MAP_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
-    }
-
-    // Try the PrimitiveArrayFieldParser
-    if (PRIMITIVE_ARRAY_FIELD_PARSER.canHandle(type)) {
-      return PRIMITIVE_ARRAY_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
-    }
-
-    // Try the CustomObjectFieldParser
-    if (CUSTOM_OBJECT_FIELD_PARSER.canHandle(type)) {
-      return CUSTOM_OBJECT_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
-    }
-
-    throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
-  }
-}
+     }
