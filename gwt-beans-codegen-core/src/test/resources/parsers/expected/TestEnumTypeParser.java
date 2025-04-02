@@ -21,6 +21,14 @@ public class TestEnumTypeParser {
     }
 
     final TestEnumType config = new TestEnumType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestEnumType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse status
     if (obj.has("status") && !obj.isNull("status")) {
@@ -58,6 +66,5 @@ public class TestEnumTypeParser {
       }
     }
 
-    return config;
   }
 }

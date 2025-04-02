@@ -21,6 +21,14 @@ public class TestSimpleTypesTypeParser {
     }
 
     final TestSimpleTypesType config = new TestSimpleTypesType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestSimpleTypesType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse primitiveByte
     if (obj.has("primitiveByte")) {
@@ -78,6 +86,5 @@ public class TestSimpleTypesTypeParser {
       config.setWrapperLong(obj.getLong("wrapperLong"));
     }
 
-    return config;
   }
 }

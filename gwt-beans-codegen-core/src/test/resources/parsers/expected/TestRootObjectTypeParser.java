@@ -23,6 +23,14 @@ public class TestRootObjectTypeParser {
     }
 
     final TestRootObjectType config = new TestRootObjectType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestRootObjectType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse foo
     if (obj.has("foo")) {
@@ -79,6 +87,5 @@ public class TestRootObjectTypeParser {
       config.setConcreteType(ConcreteTypeParser.parse(obj.getObject("concreteType")));
     }
 
-    return config;
   }
 }

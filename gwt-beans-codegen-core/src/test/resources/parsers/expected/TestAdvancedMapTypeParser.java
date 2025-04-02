@@ -28,6 +28,14 @@ public class TestAdvancedMapTypeParser {
     }
 
     final TestAdvancedMapType config = new TestAdvancedMapType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestAdvancedMapType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse doubleListMap
     if (obj.has("doubleListMap") && !obj.isNull("doubleListMap")) {
@@ -87,6 +95,5 @@ public class TestAdvancedMapTypeParser {
       config.setSanity(obj.getString("sanity"));
     }
 
-    return config;
   }
 }

@@ -26,6 +26,14 @@ public class TestComplexCollectionTypeParser {
     }
 
     final TestComplexCollectionType config = new TestComplexCollectionType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestComplexCollectionType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse objectMap
     if (obj.has("objectMap") && !obj.isNull("objectMap")) {
@@ -120,6 +128,5 @@ public class TestComplexCollectionTypeParser {
       config.setIntegerKeyObjectMap(map);
     }
 
-    return config;
   }
 }

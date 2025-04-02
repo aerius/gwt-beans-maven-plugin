@@ -28,7 +28,16 @@ public class TestEnumListTypeParser {
     if (obj == null) {
       return null;
     }
+
     final TestEnumListType config = new TestEnumListType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestEnumListType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse statusList
     if (obj.has("statusList") && !obj.isNull("statusList")) {
@@ -63,6 +72,5 @@ public class TestEnumListTypeParser {
       config.setDescription(obj.getString("description"));
     }
 
-    return config;
   }
 }

@@ -27,6 +27,14 @@ public class TestSimpleCollectionTypeParser {
     }
 
     final TestSimpleCollectionType config = new TestSimpleCollectionType();
+    parse(obj, config);
+    return config;
+  }
+
+  public static void parse(final JSONObjectHandle obj, final TestSimpleCollectionType config) {
+    if (obj == null) {
+      return;
+    }
 
     // Parse sanity
     if (obj.has("sanity")) {
@@ -83,6 +91,5 @@ public class TestSimpleCollectionTypeParser {
       config.setExplicitHashSet(new HashSet<>(obj.getStringArray("explicitHashSet")));
     }
 
-    return config;
   }
 }
