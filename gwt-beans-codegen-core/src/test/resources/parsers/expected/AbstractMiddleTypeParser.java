@@ -1,5 +1,8 @@
-package nl.aerius.codegen.test.types;
+package nl.aerius.codegen.test.generated;
 
+import javax.annotation.processing.Generated;
+
+import nl.aerius.codegen.test.types.AbstractMiddleType;
 import nl.aerius.wui.service.json.JSONObjectHandle;
 
 public class AbstractMiddleTypeParser {

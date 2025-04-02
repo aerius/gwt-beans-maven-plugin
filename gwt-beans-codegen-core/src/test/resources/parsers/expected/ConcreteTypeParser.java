@@ -1,7 +1,11 @@
-package nl.aerius.codegen.test.types;
+package nl.aerius.codegen.test.generated;
 
+import javax.annotation.processing.Generated;
+
+import nl.aerius.codegen.test.types.ConcreteType;
 import nl.aerius.wui.service.json.JSONObjectHandle;
 
+@Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class ConcreteTypeParser {
   public static ConcreteType parse(final String jsonText) {
     if (jsonText == null) {
