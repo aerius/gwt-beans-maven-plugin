@@ -94,7 +94,15 @@ public class MapFieldParser implements FieldParser {
     final ClassName valueClass;
     final String getterMethod;
     final boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
-    final ClassName keyClass = isEnumKey ? ClassName.get((Class<?>) keyType) : ParserCommonUtils.STRING;
+    final boolean isIntegerKey = keyType.equals(Integer.class);
+    final ClassName keyClass;
+    if (isEnumKey) {
+      keyClass = ClassName.get((Class<?>) keyType);
+    } else if (isIntegerKey) {
+      keyClass = ClassName.get(Integer.class);
+    } else {
+      keyClass = ParserCommonUtils.STRING;
+    }
 
     final String fieldName = field.getName();
 
@@ -120,13 +128,16 @@ public class MapFieldParser implements FieldParser {
         valueClass = ClassName.get(enumClass);
       }
 
-      code.addStatement("final $T<$T, $T> map = new $T<>()", Map.class, keyClass, valueClass, mapImpl)
+      code.addStatement("final $T<$T, $T> map = new $T<>()", declaredType, keyClass, valueClass, mapImpl)
           .add("mapObj.keySet().forEach(key -> {\n")
           .indent();
 
       if (isEnumKey) {
         code.addStatement("final $T enumKey = $T.valueOf(key)", keyClass, keyClass)
             .addStatement("map.put(enumKey, $T.valueOf(mapObj.getString(key)))", valueClass);
+      } else if (isIntegerKey) {
+        code.addStatement("final $T intKey = $T.parseInt(key)", keyClass, keyClass)
+            .addStatement("map.put(intKey, $T.valueOf(mapObj.getString(key)))", valueClass);
       } else {
         code.addStatement("map.put(key, $T.valueOf(mapObj.getString(key)))", valueClass);
       }
@@ -138,7 +149,7 @@ public class MapFieldParser implements FieldParser {
     } else {
       // Handle custom object types
       valueClass = ClassName.get((Class<?>) valueType);
-      code.addStatement("final $T<$T, $T> map = new $T<>()", mapImpl, keyClass, valueClass, mapImpl)
+      code.addStatement("final $T<$T, $T> map = new $T<>()", declaredType, keyClass, valueClass, mapImpl)
           .add("mapObj.keySet().forEach(key -> {\n")
           .indent()
           .addStatement("final $T valueObj = mapObj.getObject(key)", ParserCommonUtils.getJSONObjectHandle());
@@ -146,6 +157,10 @@ public class MapFieldParser implements FieldParser {
       if (isEnumKey) {
         code.addStatement("final $T enumKey = $T.valueOf(key)", keyClass, keyClass)
             .addStatement("map.put(enumKey, $T.parse(valueObj))",
+                ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
+      } else if (isIntegerKey) {
+        code.addStatement("final $T intKey = $T.parseInt(key)", keyClass, keyClass)
+            .addStatement("map.put(intKey, $T.parse(valueObj))",
                 ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
       } else {
         code.addStatement("map.put(key, $T.parse(valueObj))",
@@ -158,13 +173,20 @@ public class MapFieldParser implements FieldParser {
       return;
     }
 
-    code.addStatement("final $T<$T, $T> map = new $T<>()", mapImpl, keyClass, valueClass, mapImpl);
+    code.addStatement("final $T<$T, $T> map = new $T<>()", declaredType, keyClass, valueClass, mapImpl);
 
     if (isEnumKey) {
       code.add("mapObj.keySet().forEach(key -> {\n")
           .indent()
           .addStatement("final $T enumKey = $T.valueOf(key)", keyClass, keyClass)
           .addStatement("map.put(enumKey, mapObj.$L(key))", getterMethod)
+          .unindent()
+          .addStatement("})");
+    } else if (isIntegerKey) {
+      code.add("mapObj.keySet().forEach(key -> {\n")
+          .indent()
+          .addStatement("final $T intKey = $T.parseInt(key)", keyClass, keyClass)
+          .addStatement("map.put(intKey, mapObj.$L(key))", getterMethod)
           .unindent()
           .addStatement("})");
     } else {
@@ -207,7 +229,7 @@ public class MapFieldParser implements FieldParser {
     if (rawType.equals(List.class)) {
       if (elementType.equals(Double.class)) {
         code.addStatement("final $T<$T, $T<$T>> map = new $T<>()",
-            mapImpl, keyClass, LIST, ClassName.get(Double.class), mapImpl);
+            declaredType, keyClass, LIST, ClassName.get(Double.class), mapImpl);
 
         if (isEnumKey) {
           code.add("mapObj.keySet().forEach(key -> {\n")
@@ -225,7 +247,7 @@ public class MapFieldParser implements FieldParser {
         }
       } else if (elementType.equals(Integer.class)) {
         code.addStatement("final $T<$T, $T<$T>> map = new $T<>()",
-            mapImpl, keyClass, LIST, ClassName.get(Integer.class), mapImpl);
+            declaredType, keyClass, LIST, ClassName.get(Integer.class), mapImpl);
 
         if (isEnumKey) {
           code.add("mapObj.keySet().forEach(key -> {\n")
@@ -243,7 +265,7 @@ public class MapFieldParser implements FieldParser {
         }
       } else if (elementType.equals(String.class)) {
         code.addStatement("final $T<$T, $T<$T>> map = new $T<>()",
-            mapImpl, keyClass, LIST, ParserCommonUtils.STRING, mapImpl);
+            declaredType, keyClass, LIST, ParserCommonUtils.STRING, mapImpl);
 
         if (isEnumKey) {
           code.add("mapObj.keySet().forEach(key -> {\n")
@@ -263,7 +285,7 @@ public class MapFieldParser implements FieldParser {
         // Handle complex object types in lists
         final ClassName elementClass = ClassName.get((Class<?>) elementType);
         code.addStatement("final $T<$T, $T<$T>> map = new $T<>()",
-            mapImpl, keyClass, LIST, elementClass, mapImpl);
+            declaredType, keyClass, LIST, elementClass, mapImpl);
 
         if (isEnumKey) {
           code.add("mapObj.keySet().forEach(key -> {\n")

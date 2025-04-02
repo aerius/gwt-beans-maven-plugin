@@ -3,6 +3,7 @@ package nl.aerius.codegen.test.generated;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.processing.Generated;
 
@@ -30,7 +31,7 @@ public class TestAdvancedMapTypeParser {
     // Parse doubleListMap
     if (obj.has("doubleListMap") && !obj.isNull("doubleListMap")) {
       final JSONObjectHandle mapObj = obj.getObject("doubleListMap");
-      final LinkedHashMap<String, List<Double>> map = new LinkedHashMap<>();
+      final Map<String, List<Double>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getNumberArray(key));
       });
@@ -40,7 +41,7 @@ public class TestAdvancedMapTypeParser {
     // Parse stringListMap
     if (obj.has("stringListMap") && !obj.isNull("stringListMap")) {
       final JSONObjectHandle mapObj = obj.getObject("stringListMap");
-      final LinkedHashMap<String, List<String>> map = new LinkedHashMap<>();
+      final Map<String, List<String>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getStringArray(key));
       });
@@ -50,7 +51,7 @@ public class TestAdvancedMapTypeParser {
     // Parse objectListMap
     if (obj.has("objectListMap") && !obj.isNull("objectListMap")) {
       final JSONObjectHandle mapObj = obj.getObject("objectListMap");
-      final LinkedHashMap<String, List<TestSimpleTypesType>> map = new LinkedHashMap<>();
+      final Map<String, List<TestSimpleTypesType>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final List<TestSimpleTypesType> list = new ArrayList<>();
         mapObj.getArray(key).forEach(item -> {

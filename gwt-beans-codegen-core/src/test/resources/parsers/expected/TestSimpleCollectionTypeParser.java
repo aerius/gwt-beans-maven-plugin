@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.annotation.processing.Generated;
 
@@ -40,7 +41,7 @@ public class TestSimpleCollectionTypeParser {
     // Parse metadata
     if (obj.has("metadata") && !obj.isNull("metadata")) {
       final JSONObjectHandle mapObj = obj.getObject("metadata");
-      final LinkedHashMap<String, String> map = new LinkedHashMap<>();
+      final Map<String, String> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getString(key));
       });
