@@ -14,16 +14,15 @@ public class AbstractMiddleTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static AbstractMiddleType parse(JSONObjectHandle obj) {
+  public static AbstractMiddleType parse(final JSONObjectHandle obj) {
     if (obj == null) {
       return null;
     }
 
-    // Cannot instantiate abstract class
     throw new UnsupportedOperationException("Cannot create an instance of an abstract class");
   }
 
-  public static void parse(JSONObjectHandle obj, AbstractMiddleType config) {
+  public static void parse(final JSONObjectHandle obj, final AbstractMiddleType config) {
     if (obj == null) {
       return;
     }

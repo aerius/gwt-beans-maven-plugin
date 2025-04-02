@@ -14,7 +14,7 @@ public class BaseTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
   
-  public static BaseType parse(JSONObjectHandle obj) {
+  public static BaseType parse(final JSONObjectHandle obj) {
     if (obj == null) {
       return null;
     }
@@ -24,7 +24,7 @@ public class BaseTypeParser {
     return config;
   }
   
-  public static void parse(JSONObjectHandle obj, BaseType config) {
+  public static void parse(final JSONObjectHandle obj, final BaseType config) {
     if (obj == null) {
       return;
     }

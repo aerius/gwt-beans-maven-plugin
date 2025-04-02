@@ -15,7 +15,7 @@ public class ConcreteTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static ConcreteType parse(JSONObjectHandle obj) {
+  public static ConcreteType parse(final JSONObjectHandle obj) {
     if (obj == null) {
       return null;
     }
@@ -25,7 +25,7 @@ public class ConcreteTypeParser {
     return config;
   }
 
-  public static void parse(JSONObjectHandle obj, ConcreteType config) {
+  public static void parse(final JSONObjectHandle obj, final ConcreteType config) {
     if (obj == null) {
       return;
     }

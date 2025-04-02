@@ -215,10 +215,16 @@ public final class ParserWriterUtils {
 
     methodBuilder.beginControlFlow("if (obj == null)")
         .addStatement("return null")
-        .endControlFlow()
-        .addStatement("final $T config = new $T()", targetClass, targetClass)
-        .addStatement("parse(obj, config)")
-        .addStatement("return config");
+        .endControlFlow();
+
+    // Check if the class is abstract
+    if (java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())) {
+      methodBuilder.addStatement("throw new UnsupportedOperationException(\"Cannot create an instance of an abstract class\")");
+    } else {
+      methodBuilder.addStatement("final $T config = new $T()", targetClass, targetClass)
+          .addStatement("parse(obj, config)")
+          .addStatement("return config");
+    }
 
     return methodBuilder.build();
   }
@@ -234,6 +240,13 @@ public final class ParserWriterUtils {
     methodBuilder.beginControlFlow("if (obj == null)")
         .addStatement("return")
         .endControlFlow();
+
+    // Parse fields from parent class if any
+    Class<?> superclass = targetClass.getSuperclass();
+    if (superclass != null && superclass != Object.class) {
+      methodBuilder.addComment(String.format("Parse fields from parent class (%s)", superclass.getSimpleName()))
+          .addStatement("$T.parse(obj, config)", determineParserClassName(superclass, parserPackage));
+    }
 
     // Process all fields
     for (Field field : targetClass.getDeclaredFields()) {
