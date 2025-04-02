@@ -34,8 +34,9 @@ public class ConcreteTypeParser {
     AbstractMiddleTypeParser.parse(obj, config);
 
     // Parse outer
-    if (obj.has("outer")) {
-      config.setOuter(obj.getString("outer"));
+    if (obj.has("outer") && !obj.isNull("outer")) {
+      final String value = obj.getString("outer");
+      config.setOuter(value);
     }
   }
 }

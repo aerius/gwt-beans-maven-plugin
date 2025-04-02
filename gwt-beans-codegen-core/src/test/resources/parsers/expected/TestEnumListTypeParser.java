@@ -60,16 +60,25 @@ public class TestEnumListTypeParser {
     // Parse statusMap
     if (obj.has("statusMap") && !obj.isNull("statusMap")) {
       final JSONObjectHandle mapObj = obj.getObject("statusMap");
-      final Map<String, TestEnumType.Status> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        map.put(key, TestEnumType.Status.valueOf(mapObj.getString(key)));
+      final Map<String, TestEnumType.Status> level1Map = new LinkedHashMap<>();
+      mapObj.keySet().forEach(level1Key -> {
+        final String level2Str = mapObj.getString(level1Key);
+        TestEnumType.Status level2Value = null;
+        if (level2Str != null) {
+          try {
+            level2Value = TestEnumType.Status.valueOf(level2Str);
+          } catch (IllegalArgumentException e) {
+            /* ignore */ }
+        }
+        level1Map.put(level1Key, level2Value);
       });
-      config.setStatusMap(map);
+      config.setStatusMap(level1Map);
     }
 
     // Parse description
-    if (obj.has("description")) {
-      config.setDescription(obj.getString("description"));
+    if (obj.has("description") && !obj.isNull("description")) {
+      final String value = obj.getString("description");
+      config.setDescription(value);
     }
 
   }

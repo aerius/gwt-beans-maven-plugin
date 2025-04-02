@@ -145,10 +145,20 @@ public final class ParserCommonUtils {
         return CodeBlock.of("$L.getString($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Integer.class) || clazz.equals(int.class)) {
         return CodeBlock.of("$L.getInteger($L)", objVarName, keyOrFieldNameExpression);
+      } else if (clazz.equals(Short.class) || clazz.equals(short.class)) {
+        return CodeBlock.of("$L.getInteger($L)", objVarName, keyOrFieldNameExpression);
+      } else if (clazz.equals(Byte.class) || clazz.equals(byte.class)) {
+        return CodeBlock.of("$L.getInteger($L)", objVarName, keyOrFieldNameExpression);
+      } else if (clazz.equals(Long.class) || clazz.equals(long.class)) {
+        return CodeBlock.of("$L.getLong($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Double.class) || clazz.equals(double.class)) {
+        return CodeBlock.of("$L.getNumber($L)", objVarName, keyOrFieldNameExpression);
+      } else if (clazz.equals(Float.class) || clazz.equals(float.class)) {
         return CodeBlock.of("$L.getNumber($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Boolean.class) || clazz.equals(boolean.class)) {
         return CodeBlock.of("$L.getBoolean($L)", objVarName, keyOrFieldNameExpression);
+      } else if (clazz.equals(Character.class) || clazz.equals(char.class)) {
+        return CodeBlock.of("$L.getString($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.isEnum()) {
         // Enums are typically stored as strings, the parser will handle valueOf
         return CodeBlock.of("$L.getString($L)", objVarName, keyOrFieldNameExpression);
@@ -180,5 +190,15 @@ public final class ParserCommonUtils {
     // Log warning or throw error might be better long-term
     System.err.println("Warning: Defaulting to getObject() for unknown type in createFieldAccessCode: " + type.getTypeName());
     return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
+  }
+
+  /**
+   * Checks if the given type represents a Java primitive type.
+   *
+   * @param type The type to check.
+   * @return true if the type is a primitive (int, long, boolean, etc.), false otherwise.
+   */
+  public static boolean isPrimitiveType(Type type) {
+    return (type instanceof Class<?>) && ((Class<?>) type).isPrimitive();
   }
 }

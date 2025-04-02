@@ -1,11 +1,11 @@
 package nl.aerius.codegen.test.generated;
 
-import javax.annotation.processing.Generated;
-import nl.aerius.wui.service.json.JSONObjectHandle;
-import nl.aerius.codegen.test.types.TestNestedMapType;
-import nl.aerius.codegen.test.types.TestEnumType;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
+import nl.aerius.codegen.test.types.TestEnumType;
+import nl.aerius.codegen.test.types.TestNestedMapType;
+import nl.aerius.wui.service.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestNestedMapTypeParser {
@@ -13,7 +13,6 @@ public class TestNestedMapTypeParser {
     if (jsonText == null) {
       return null;
     }
-
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
@@ -21,7 +20,6 @@ public class TestNestedMapTypeParser {
     if (obj == null) {
       return null;
     }
-
     final TestNestedMapType config = new TestNestedMapType();
     parse(obj, config);
     return config;
@@ -33,123 +31,128 @@ public class TestNestedMapTypeParser {
     }
 
     // Parse stringToNestedIntMap
-    if (obj.has("stringToNestedIntMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("stringToNestedIntMap");
-      final Map<String, Map<String, Integer>> map = new HashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final JSONObjectHandle valueObj = mapObj.getObject(key);
-        final Map<String, Integer> innerMap = new HashMap<>();
-        valueObj.keySet().forEach(innerKey -> {
-          innerMap.put(innerKey, valueObj.getInteger(innerKey));
+    if (obj.has("stringToNestedIntMap") && !obj.isNull("stringToNestedIntMap")) {
+      final JSONObjectHandle level1Obj = obj.getObject("stringToNestedIntMap");
+      final Map<String, Map<String, Integer>> level1Map = new LinkedHashMap<>();
+      level1Obj.keySet().forEach(level1Key -> {
+        final JSONObjectHandle level2Obj = level1Obj.getObject(level1Key);
+        final Map<String, Integer> level2Map = new LinkedHashMap<>();
+        level2Obj.keySet().forEach(level2Key -> {
+          final Integer level3Value = level2Obj.getInteger(level2Key);
+          level2Map.put(level2Key, level3Value);
         });
-        map.put(key, innerMap);
+        level1Map.put(level1Key, level2Map);
       });
-      config.setStringToNestedIntMap(map);
+      config.setStringToNestedIntMap(level1Map);
     }
 
     // Parse deeplyNestedDoubleMap
-    if (obj.has("deeplyNestedDoubleMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("deeplyNestedDoubleMap");
-      final Map<String, Map<String, Map<String, Double>>> map = new HashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final JSONObjectHandle midObj = mapObj.getObject(key);
-        final Map<String, Map<String, Double>> midMap = new HashMap<>();
-        midObj.keySet().forEach(midKey -> {
-          final JSONObjectHandle innerObj = midObj.getObject(midKey);
-          final Map<String, Double> innerMap = new HashMap<>();
-          innerObj.keySet().forEach(innerKey -> {
-            innerMap.put(innerKey, innerObj.getNumber(innerKey));
+    if (obj.has("deeplyNestedDoubleMap") && !obj.isNull("deeplyNestedDoubleMap")) {
+      final JSONObjectHandle level1Obj = obj.getObject("deeplyNestedDoubleMap");
+      final Map<String, Map<String, Map<String, Double>>> level1Map = new LinkedHashMap<>();
+      level1Obj.keySet().forEach(level1Key -> {
+        final JSONObjectHandle level2Obj = level1Obj.getObject(level1Key);
+        final Map<String, Map<String, Double>> level2Map = new LinkedHashMap<>();
+        level2Obj.keySet().forEach(level2Key -> {
+          final JSONObjectHandle level3Obj = level2Obj.getObject(level2Key);
+          final Map<String, Double> level3Map = new LinkedHashMap<>();
+          level3Obj.keySet().forEach(level3Key -> {
+            final Double level4Value = level3Obj.getNumber(level3Key);
+            level3Map.put(level3Key, level4Value);
           });
-          midMap.put(midKey, innerMap);
+          level2Map.put(level2Key, level3Map);
         });
-        map.put(key, midMap);
+        level1Map.put(level1Key, level2Map);
       });
-      config.setDeeplyNestedDoubleMap(map);
+      config.setDeeplyNestedDoubleMap(level1Map);
     }
 
     // Parse mixedNestedMap
-    if (obj.has("mixedNestedMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("mixedNestedMap");
-      final Map<String, Map<Integer, Map<String, Boolean>>> map = new HashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final JSONObjectHandle midObj = mapObj.getObject(key);
-        final Map<Integer, Map<String, Boolean>> midMap = new HashMap<>();
-        midObj.keySet().forEach(midKey -> {
-          final JSONObjectHandle innerObj = midObj.getObject(midKey);
-          final Map<String, Boolean> innerMap = new HashMap<>();
-          innerObj.keySet().forEach(innerKey -> {
-            innerMap.put(innerKey, innerObj.getBoolean(innerKey));
+    if (obj.has("mixedNestedMap") && !obj.isNull("mixedNestedMap")) {
+      final JSONObjectHandle level1Obj = obj.getObject("mixedNestedMap");
+      final Map<String, Map<Integer, Map<String, Boolean>>> level1Map = new LinkedHashMap<>();
+      level1Obj.keySet().forEach(level1Key -> {
+        final JSONObjectHandle level2Obj = level1Obj.getObject(level1Key);
+        final Map<Integer, Map<String, Boolean>> level2Map = new LinkedHashMap<>();
+        level2Obj.keySet().forEach(level2Key -> {
+          final JSONObjectHandle level3Obj = level2Obj.getObject(level2Key);
+          final Map<String, Boolean> level3Map = new LinkedHashMap<>();
+          level3Obj.keySet().forEach(level3Key -> {
+            final Boolean level4Value = level3Obj.getBoolean(level3Key);
+            level3Map.put(level3Key, level4Value);
           });
-          midMap.put(Integer.parseInt(midKey), innerMap);
+          level2Map.put(Integer.parseInt(level2Key), level3Map);
         });
-        map.put(key, midMap);
+        level1Map.put(level1Key, level2Map);
       });
-      config.setMixedNestedMap(map);
+      config.setMixedNestedMap(level1Map);
     }
 
     // Parse enumKeyNestedMap
-    if (obj.has("enumKeyNestedMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("enumKeyNestedMap");
-      final Map<TestEnumType.Status, Map<String, Map<String, Integer>>> map = new HashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final JSONObjectHandle midObj = mapObj.getObject(key);
-        final Map<String, Map<String, Integer>> midMap = new HashMap<>();
-        midObj.keySet().forEach(midKey -> {
-          final JSONObjectHandle innerObj = midObj.getObject(midKey);
-          final Map<String, Integer> innerMap = new HashMap<>();
-          innerObj.keySet().forEach(innerKey -> {
-            innerMap.put(innerKey, innerObj.getInteger(innerKey));
+    if (obj.has("enumKeyNestedMap") && !obj.isNull("enumKeyNestedMap")) {
+      final JSONObjectHandle level1Obj = obj.getObject("enumKeyNestedMap");
+      final Map<TestEnumType.Status, Map<String, Map<String, Integer>>> level1Map = new LinkedHashMap<>();
+      level1Obj.keySet().forEach(level1Key -> {
+        final JSONObjectHandle level2Obj = level1Obj.getObject(level1Key);
+        final Map<String, Map<String, Integer>> level2Map = new LinkedHashMap<>();
+        level2Obj.keySet().forEach(level2Key -> {
+          final JSONObjectHandle level3Obj = level2Obj.getObject(level2Key);
+          final Map<String, Integer> level3Map = new LinkedHashMap<>();
+          level3Obj.keySet().forEach(level3Key -> {
+            final Integer level4Value = level3Obj.getInteger(level3Key);
+            level3Map.put(level3Key, level4Value);
           });
-          midMap.put(midKey, innerMap);
+          level2Map.put(level2Key, level3Map);
         });
-        map.put(TestEnumType.Status.valueOf(key), midMap);
+        level1Map.put(TestEnumType.Status.valueOf(level1Key), level2Map);
       });
-      config.setEnumKeyNestedMap(map);
+      config.setEnumKeyNestedMap(level1Map);
     }
 
     // Parse deeplyNestedStringMap
-    if (obj.has("deeplyNestedStringMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("deeplyNestedStringMap");
-      final Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>> map = new HashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final JSONObjectHandle level2Obj = mapObj.getObject(key);
-        final Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>> level2 = new HashMap<>();
+    if (obj.has("deeplyNestedStringMap") && !obj.isNull("deeplyNestedStringMap")) {
+      final JSONObjectHandle level1Obj = obj.getObject("deeplyNestedStringMap");
+      final Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>> level1Map = new LinkedHashMap<>();
+      level1Obj.keySet().forEach(level1Key -> {
+        final JSONObjectHandle level2Obj = level1Obj.getObject(level1Key);
+        final Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>> level2Map = new LinkedHashMap<>();
         level2Obj.keySet().forEach(level2Key -> {
           final JSONObjectHandle level3Obj = level2Obj.getObject(level2Key);
-          final Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>> level3 = new HashMap<>();
+          final Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>> level3Map = new LinkedHashMap<>();
           level3Obj.keySet().forEach(level3Key -> {
             final JSONObjectHandle level4Obj = level3Obj.getObject(level3Key);
-            final Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>> level4 = new HashMap<>();
+            final Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>> level4Map = new LinkedHashMap<>();
             level4Obj.keySet().forEach(level4Key -> {
               final JSONObjectHandle level5Obj = level4Obj.getObject(level4Key);
-              final Map<String, Map<String, Map<String, Map<String, String>>>> level5 = new HashMap<>();
+              final Map<String, Map<String, Map<String, Map<String, String>>>> level5Map = new LinkedHashMap<>();
               level5Obj.keySet().forEach(level5Key -> {
                 final JSONObjectHandle level6Obj = level5Obj.getObject(level5Key);
-                final Map<String, Map<String, Map<String, String>>> level6 = new HashMap<>();
+                final Map<String, Map<String, Map<String, String>>> level6Map = new LinkedHashMap<>();
                 level6Obj.keySet().forEach(level6Key -> {
                   final JSONObjectHandle level7Obj = level6Obj.getObject(level6Key);
-                  final Map<String, Map<String, String>> level7 = new HashMap<>();
+                  final Map<String, Map<String, String>> level7Map = new LinkedHashMap<>();
                   level7Obj.keySet().forEach(level7Key -> {
                     final JSONObjectHandle level8Obj = level7Obj.getObject(level7Key);
-                    final Map<String, String> level8 = new HashMap<>();
+                    final Map<String, String> level8Map = new LinkedHashMap<>();
                     level8Obj.keySet().forEach(level8Key -> {
-                      level8.put(level8Key, level8Obj.getString(level8Key));
+                      final String level9value = level8Obj.getString(level8Key);
+                      level8Map.put(level8Key, level9value);
                     });
-                    level7.put(level7Key, level8);
+                    level7Map.put(level7Key, level8Map);
                   });
-                  level6.put(level6Key, level7);
+                  level6Map.put(level6Key, level7Map);
                 });
-                level5.put(level5Key, level6);
+                level5Map.put(level5Key, level6Map);
               });
-              level4.put(level4Key, level5);
+              level4Map.put(level4Key, level5Map);
             });
-            level3.put(level3Key, level4);
+            level3Map.put(level3Key, level4Map);
           });
-          level2.put(level2Key, level3);
+          level2Map.put(level2Key, level3Map);
         });
-        map.put(key, level2);
+        level1Map.put(level1Key, level2Map);
       });
-      config.setDeeplyNestedStringMap(map);
+      config.setDeeplyNestedStringMap(level1Map);
     }
   }
 }

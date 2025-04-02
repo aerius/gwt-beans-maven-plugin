@@ -295,24 +295,29 @@ public final class ParserWriterUtils {
           && !field.isSynthetic()) {
         methodBuilder.addCode("\n");
         methodBuilder.addComment("Parse $L", field.getName());
-        methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck("obj", field.getName(), true, innerCode -> {
-          // Refined access: Use specific getter based on broad type category if possible before dispatch
-          // Pass CodeBlock representing the field name string literal
-          CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
-              field.getGenericType(),
-              "obj",
-              CodeBlock.of("$S", field.getName()));
+        // Determine if null check is required (true for non-primitives)
+        boolean requireNonNull = !ParserCommonUtils.isPrimitiveType(field.getGenericType());
+        methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck(
+            "obj",
+            field.getName(),
+            requireNonNull, // Pass determined value
+            innerCode -> {
+              // Pass CodeBlock representing the field name string literal
+              CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
+                  field.getGenericType(),
+                  "obj",
+                  CodeBlock.of("$S", field.getName()));
 
-          String resultVar = dispatchGenerateParsingCodeInto(
-              innerCode,
-              field.getGenericType(),
-              "obj", // Top level object
-              parserPackage,
-              fieldAccess, // Pass the code to access the field's data
-              1 // Start top-level fields at level 1
-          );
-          innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
-        }));
+              String resultVar = dispatchGenerateParsingCodeInto(
+                  innerCode,
+                  field.getGenericType(),
+                  "obj", // Top level object
+                  parserPackage,
+                  fieldAccess, // Pass the code to access the field's data
+                  1 // Start top-level fields at level 1
+              );
+              innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
+            }));
       }
     }
 

@@ -32,7 +32,8 @@ public class AbstractMiddleTypeParser {
 
     // Parse middle
     if (obj.has("middle") && !obj.isNull("middle")) {
-      config.setMiddle(obj.getString("middle"));
+      final String value = obj.getString("middle");
+      config.setMiddle(value);
     }
   }
 }

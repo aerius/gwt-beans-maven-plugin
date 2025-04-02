@@ -5,10 +5,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.processing.Generated;
 
 import nl.aerius.wui.service.json.JSONObjectHandle;
+import nl.aerius.wui.service.json.JSONArrayHandle;
 import nl.aerius.codegen.test.types.TestSimpleCollectionType;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
@@ -88,7 +90,13 @@ public class TestSimpleCollectionTypeParser {
 
     // Parse explicitHashSet
     if (obj.has("explicitHashSet") && !obj.isNull("explicitHashSet")) {
-      config.setExplicitHashSet(new HashSet<>(obj.getStringArray("explicitHashSet")));
+      final JSONArrayHandle level1JsonArray = obj.getArray("explicitHashSet");
+      final Set<String> level1Set = new HashSet<>();
+      level1JsonArray.forEach(level1Item -> {
+        final String level2value = level1Item;
+        level1Set.add(level2value);
+      });
+      config.setExplicitHashSet(level1Set);
     }
 
   }

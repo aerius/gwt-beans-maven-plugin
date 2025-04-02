@@ -2,9 +2,11 @@ package nl.aerius.codegen.test.generated;
 
 
 import javax.annotation.processing.Generated;
+
 import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.aerius.codegen.test.types.TestRootObjectType;
 import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
+import nl.aerius.codegen.test.types.TestNestedMapType;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestRootObjectTypeParser {
@@ -88,7 +90,8 @@ public class TestRootObjectTypeParser {
 
     // Parse nestedMapType
     if (obj.has("nestedMapType") && !obj.isNull("nestedMapType")) {
-      config.setNestedMapType(TestNestedMapTypeParser.parse(obj.getObject("nestedMapType")));
+      final TestNestedMapType level1Value = TestNestedMapTypeParser.parse(obj.getObject("nestedMapType"));
+      config.setNestedMapType(level1Value);
     }
   }
 }

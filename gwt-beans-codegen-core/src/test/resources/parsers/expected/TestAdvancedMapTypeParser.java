@@ -91,8 +91,9 @@ public class TestAdvancedMapTypeParser {
     // Skipping field with complex generic type: wildcardKeyMap
 
     // Parse sanity
-    if (obj.has("sanity")) {
-      config.setSanity(obj.getString("sanity"));
+    if (obj.has("sanity") && !obj.isNull("sanity")) {
+      final String value = obj.getString("sanity");
+      config.setSanity(value);
     }
 
   }

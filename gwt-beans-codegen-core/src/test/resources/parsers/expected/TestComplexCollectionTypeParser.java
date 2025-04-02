@@ -2,6 +2,7 @@ package nl.aerius.codegen.test.generated;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.HashMap;
 
 import javax.annotation.processing.Generated;
 
@@ -118,14 +119,13 @@ public class TestComplexCollectionTypeParser {
 
     // Parse integerKeyObjectMap
     if (obj.has("integerKeyObjectMap") && !obj.isNull("integerKeyObjectMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("integerKeyObjectMap");
-      final Map<Integer, TestSimpleTypesType> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final JSONObjectHandle valueObj = mapObj.getObject(key);
-        final Integer intKey = Integer.parseInt(key);
-        map.put(intKey, TestSimpleTypesTypeParser.parse(valueObj));
+      final JSONObjectHandle level1Obj = obj.getObject("integerKeyObjectMap");
+      final Map<Integer, TestSimpleTypesType> level1Map = new LinkedHashMap<>();
+      level1Obj.keySet().forEach(level1Key -> {
+        final TestSimpleTypesType level2Value = TestSimpleTypesTypeParser.parse(level1Obj.getObject(level1Key));
+        level1Map.put(Integer.parseInt(level1Key), level2Value);
       });
-      config.setIntegerKeyObjectMap(map);
+      config.setIntegerKeyObjectMap(level1Map);
     }
 
   }

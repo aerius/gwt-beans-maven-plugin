@@ -31,7 +31,8 @@ public class BaseTypeParser {
     
     // Parse deepest
     if (obj.has("deepest") && !obj.isNull("deepest")) {
-      config.setDeepest(obj.getString("deepest"));
+      final String value = obj.getString("deepest");
+      config.setDeepest(value);
     }
   }
 } 

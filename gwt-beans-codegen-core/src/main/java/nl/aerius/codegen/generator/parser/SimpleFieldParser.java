@@ -168,7 +168,8 @@ public class SimpleFieldParser implements TypeParser {
         code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : null",
             clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
       } else { // char primitive
-        code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : '\u0000'",
+        // Use integer 0 as the default, as char literal rendering seems problematic
+            code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : 0",
             clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
       }
     } else {

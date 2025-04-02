@@ -32,59 +32,64 @@ public class TestSimpleTypesTypeParser {
 
     // Parse primitiveByte
     if (obj.has("primitiveByte")) {
-      config.setPrimitiveByte((byte) obj.getInteger("primitiveByte"));
+      final byte value = (byte) obj.getInteger("primitiveByte");
+      config.setPrimitiveByte(value);
     }
 
     // Parse primitiveShort
     if (obj.has("primitiveShort")) {
-      config.setPrimitiveShort((short) obj.getInteger("primitiveShort"));
+      final short value = (short) obj.getInteger("primitiveShort");
+      config.setPrimitiveShort(value);
     }
 
     // Parse primitiveFloat
     if (obj.has("primitiveFloat")) {
-      config.setPrimitiveFloat(obj.getNumber("primitiveFloat").floatValue());
+      final float value = obj.getNumber("primitiveFloat").floatValue();
+      config.setPrimitiveFloat(value);
     }
 
     // Parse primitiveChar
     if (obj.has("primitiveChar")) {
-      String charStr = obj.getString("primitiveChar");
-      if (charStr != null && !charStr.isEmpty()) {
-        config.setPrimitiveChar(charStr.charAt(0));
-      }
+      final String str = obj.getString("primitiveChar");
+      final char value = (str != null && !str.isEmpty()) ? str.charAt(0) : 0;
+      config.setPrimitiveChar(value);
     }
 
     // Parse primitiveLong
     if (obj.has("primitiveLong")) {
-      config.setPrimitiveLong(obj.getLong("primitiveLong"));
+      final long value = obj.getLong("primitiveLong");
+      config.setPrimitiveLong(value);
     }
 
     // Parse wrapperByte
     if (obj.has("wrapperByte") && !obj.isNull("wrapperByte")) {
-      config.setWrapperByte((byte) obj.getInteger("wrapperByte"));
+      final Byte value = (byte) obj.getInteger("wrapperByte");
+      config.setWrapperByte(value);
     }
 
     // Parse wrapperShort
     if (obj.has("wrapperShort") && !obj.isNull("wrapperShort")) {
-      config.setWrapperShort((short) obj.getInteger("wrapperShort"));
+      final Short value = (short) obj.getInteger("wrapperShort");
+      config.setWrapperShort(value);
     }
 
     // Parse wrapperFloat
     if (obj.has("wrapperFloat") && !obj.isNull("wrapperFloat")) {
-      config.setWrapperFloat(obj.getNumber("wrapperFloat").floatValue());
+      final Float value = obj.getNumber("wrapperFloat").floatValue();
+      config.setWrapperFloat(value);
     }
 
     // Parse wrapperChar
     if (obj.has("wrapperChar") && !obj.isNull("wrapperChar")) {
-      String charStr = obj.getString("wrapperChar");
-      if (charStr != null && !charStr.isEmpty()) {
-        config.setWrapperChar(charStr.charAt(0));
-      }
+      final String str = obj.getString("wrapperChar");
+      final Character value = (str != null && !str.isEmpty()) ? str.charAt(0) : null;
+      config.setWrapperChar(value);
     }
 
     // Parse wrapperLong
     if (obj.has("wrapperLong") && !obj.isNull("wrapperLong")) {
-      config.setWrapperLong(obj.getLong("wrapperLong"));
+      final Long value = obj.getLong("wrapperLong");
+      config.setWrapperLong(value);
     }
-
   }
 }
