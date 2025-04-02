@@ -82,6 +82,7 @@ public final class ParserWriterUtils {
   public static void generateParserForFields(TypeSpec.Builder typeSpec, Class<?> targetClass, String parserPackage) {
     typeSpec.addMethod(createStringParseMethod(targetClass));
     typeSpec.addMethod(createObjectParseMethod(targetClass, parserPackage));
+    typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage));
   }
 
   /**
@@ -215,7 +216,24 @@ public final class ParserWriterUtils {
     methodBuilder.beginControlFlow("if (obj == null)")
         .addStatement("return null")
         .endControlFlow()
-        .addStatement("final $T config = new $T()", targetClass, targetClass);
+        .addStatement("final $T config = new $T()", targetClass, targetClass)
+        .addStatement("parse(obj, config)")
+        .addStatement("return config");
+
+    return methodBuilder.build();
+  }
+
+  private static MethodSpec createConfigParseMethod(Class<?> targetClass, String parserPackage) {
+    final ClassName targetClassName = ClassName.get(targetClass);
+    final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+        .returns(void.class)
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), "obj", Modifier.FINAL)
+        .addParameter(targetClassName, "config", Modifier.FINAL);
+
+    methodBuilder.beginControlFlow("if (obj == null)")
+        .addStatement("return")
+        .endControlFlow();
 
     // Process all fields
     for (Field field : targetClass.getDeclaredFields()) {
@@ -227,8 +245,6 @@ public final class ParserWriterUtils {
         methodBuilder.addCode(generateFieldParsingCode(field, "obj", parserPackage));
       }
     }
-
-    methodBuilder.addStatement("return config");
 
     return methodBuilder.build();
   }
@@ -259,7 +275,11 @@ public final class ParserWriterUtils {
       return PRIMITIVE_ARRAY_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
     }
 
-    // Fall back to custom object handling
-    return CUSTOM_OBJECT_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    // Try the CustomObjectFieldParser
+    if (CUSTOM_OBJECT_FIELD_PARSER.canHandle(field)) {
+      return CUSTOM_OBJECT_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    }
+
+    throw new IllegalArgumentException("No parser found for field: " + field.getName());
   }
 }
