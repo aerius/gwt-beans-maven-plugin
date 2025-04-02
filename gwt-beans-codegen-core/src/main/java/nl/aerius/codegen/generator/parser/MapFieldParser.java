@@ -1,12 +1,15 @@
 package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonKey;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 
@@ -95,11 +98,14 @@ public class MapFieldParser implements FieldParser {
     final String getterMethod;
     final boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
     final boolean isIntegerKey = keyType.equals(Integer.class);
+    final boolean isComplexKey = keyType instanceof Class<?> && hasJsonKeyAnnotation((Class<?>) keyType);
     final ClassName keyClass;
     if (isEnumKey) {
       keyClass = ClassName.get((Class<?>) keyType);
     } else if (isIntegerKey) {
       keyClass = ClassName.get(Integer.class);
+    } else if (isComplexKey) {
+      keyClass = ClassName.get((Class<?>) keyType);
     } else {
       keyClass = ParserCommonUtils.STRING;
     }
@@ -138,6 +144,8 @@ public class MapFieldParser implements FieldParser {
       } else if (isIntegerKey) {
         code.addStatement("final $T intKey = $T.parseInt(key)", keyClass, keyClass)
             .addStatement("map.put(intKey, $T.valueOf(mapObj.getString(key)))", valueClass);
+      } else if (isComplexKey) {
+        code.addStatement("map.put($T.fromStringValue(key), $T.valueOf(mapObj.getString(key)))", keyClass, valueClass);
       } else {
         code.addStatement("map.put(key, $T.valueOf(mapObj.getString(key)))", valueClass);
       }
@@ -162,6 +170,10 @@ public class MapFieldParser implements FieldParser {
         code.addStatement("final $T intKey = $T.parseInt(key)", keyClass, keyClass)
             .addStatement("map.put(intKey, $T.parse(valueObj))",
                 ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
+      } else if (isComplexKey) {
+        code.addStatement("map.put($T.fromStringValue(key), $T.parse(valueObj))",
+            keyClass,
+            ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
       } else {
         code.addStatement("map.put(key, $T.parse(valueObj))",
             ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
@@ -189,6 +201,12 @@ public class MapFieldParser implements FieldParser {
           .addStatement("map.put(intKey, mapObj.$L(key))", getterMethod)
           .unindent()
           .addStatement("})");
+    } else if (isComplexKey) {
+      code.add("mapObj.keySet().forEach(key -> {\n")
+          .indent()
+          .addStatement("map.put($T.fromStringValue(key), mapObj.$L(key))", keyClass, getterMethod)
+          .unindent()
+          .addStatement("})");
     } else {
       code.add("mapObj.keySet().forEach(key -> {\n")
           .indent()
@@ -198,6 +216,27 @@ public class MapFieldParser implements FieldParser {
     }
 
     code.addStatement("config.set$L(map)", ParserCommonUtils.capitalize(fieldName));
+  }
+
+  private boolean hasJsonKeyAnnotation(Class<?> clazz) {
+    try {
+      // Check if the class has a method annotated with @JsonKey
+      for (Method method : clazz.getMethods()) {
+        if (method.isAnnotationPresent(JsonKey.class)) {
+          return true;
+        }
+      }
+      // Check if the class has a method annotated with @JsonCreator
+      for (Method method : clazz.getMethods()) {
+        if (method.isAnnotationPresent(JsonCreator.class)) {
+          return true;
+        }
+      }
+    } catch (Exception e) {
+      // If we can't check the annotations, assume it's not a complex key type
+      return false;
+    }
+    return false;
   }
 
   private void generateCollectionValueMapCode(CodeBlock.Builder code, Field field, Type keyType, Type valueType,

@@ -1,6 +1,7 @@
 package nl.aerius.codegen.analyzer;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -22,6 +23,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonKey;
 import com.palantir.javapoet.ClassName;
 
 import io.github.classgraph.ClassGraph;
@@ -219,8 +222,10 @@ public class TypeAnalyzer {
   }
 
   private void addTypeForGeneration(final Class<?> type) {
-    // Don't generate parsers for enums or types with custom parsers
-    if (type.isEnum() || customParserTypes.contains(type.getSimpleName())) {
+    // Don't generate parsers for enums, types with custom parsers, or complex key types
+    if (type.isEnum() || 
+        customParserTypes.contains(type.getSimpleName()) || 
+        isComplexKeyType(type)) {
       return;
     }
 
@@ -236,6 +241,39 @@ public class TypeAnalyzer {
       final String className = type.getSimpleName();
       discoveredTypes.add(ClassName.get(packageName, className));
     }
+  }
+
+  /**
+   * Checks if a type is a complex key type (has @JsonKey and @JsonCreator annotations).
+   * These types are used as map keys and don't need their own parser.
+   * 
+   * @param type The type to check
+   * @return true if the type is a complex key type, false otherwise
+   */
+  private boolean isComplexKeyType(Class<?> type) {
+    try {
+      boolean hasJsonKey = false;
+      boolean hasJsonCreator = false;
+      
+      // Check if the class has a method annotated with @JsonKey
+      for (Method method : type.getMethods()) {
+        if (method.isAnnotationPresent(JsonKey.class)) {
+          hasJsonKey = true;
+        }
+        if (method.isAnnotationPresent(JsonCreator.class)) {
+          hasJsonCreator = true;
+        }
+        
+        // If we found both annotations, it's a complex key type
+        if (hasJsonKey && hasJsonCreator) {
+          return true;
+        }
+      }
+    } catch (Exception e) {
+      // If we can't check the annotations, assume it's not a complex key type
+      return false;
+    }
+    return false;
   }
 
   private boolean hasCustomParser(final Class<?> type) {

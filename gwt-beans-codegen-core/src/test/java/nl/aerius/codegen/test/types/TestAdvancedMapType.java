@@ -17,6 +17,9 @@ public class TestAdvancedMapType {
   @JsonIgnore
   private Map<String, Comparable<?>> interfaceMap;
 
+  // Map with complex object keys
+  private Map<TestComplexKeyType, Double> complexKeyMap;
+
   // Map with wildcard types (should be skipped by the parser)
   @JsonIgnore
   private Map<String, List<?>> wildcardListMap;
@@ -56,6 +59,14 @@ public class TestAdvancedMapType {
 
   public void setInterfaceMap(Map<String, Comparable<?>> interfaceMap) {
     this.interfaceMap = interfaceMap;
+  }
+
+  public Map<TestComplexKeyType, Double> getComplexKeyMap() {
+    return complexKeyMap;
+  }
+
+  public void setComplexKeyMap(Map<TestComplexKeyType, Double> complexKeyMap) {
+    this.complexKeyMap = complexKeyMap;
   }
 
   public Map<String, List<?>> getWildcardListMap() {
@@ -127,6 +138,12 @@ public class TestAdvancedMapType {
     interfaceMap.put("integer", 42);
     test.setInterfaceMap(interfaceMap);
 
+    // Set up complex key map
+    Map<TestComplexKeyType, Double> complexKeyMap = new HashMap<>();
+    complexKeyMap.put(new TestComplexKeyType("key1", 1), 10.5);
+    complexKeyMap.put(new TestComplexKeyType("key2", 2), 20.7);
+    test.setComplexKeyMap(complexKeyMap);
+
     // Set up wildcard maps (these should be skipped by the parser)
     Map<String, List<?>> wildcardListMap = new HashMap<>();
     wildcardListMap.put("mixed", List.of("string", 42, 3.14));
@@ -160,6 +177,7 @@ public class TestAdvancedMapType {
     test.setStringListMap(null);
     test.setObjectListMap(null);
     test.setInterfaceMap(null);
+    test.setComplexKeyMap(null);
     test.setWildcardListMap(null);
     test.setWildcardKeyMap(null);
     return test;

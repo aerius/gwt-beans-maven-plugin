@@ -10,6 +10,7 @@ import javax.annotation.processing.Generated;
 import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.aerius.codegen.test.types.TestAdvancedMapType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
+import nl.aerius.codegen.test.types.TestComplexKeyType;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestAdvancedMapTypeParser {
@@ -64,6 +65,16 @@ public class TestAdvancedMapTypeParser {
 
     // Parse interfaceMap
     // Skipping field with complex generic type: interfaceMap
+
+    // Parse complexKeyMap
+    if (obj.has("complexKeyMap") && !obj.isNull("complexKeyMap")) {
+      final JSONObjectHandle mapObj = obj.getObject("complexKeyMap");
+      final Map<TestComplexKeyType, Double> map = new LinkedHashMap<>();
+      mapObj.keySet().forEach(key -> {
+        map.put(TestComplexKeyType.fromStringValue(key), mapObj.getNumber(key));
+      });
+      config.setComplexKeyMap(map);
+    }
 
     // Parse wildcardListMap
     // Skipping field with complex generic type: wildcardListMap
