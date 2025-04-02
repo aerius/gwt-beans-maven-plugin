@@ -86,5 +86,9 @@ public class TestRootObjectTypeParser {
       config.setConcreteType(ConcreteTypeParser.parse(obj.getObject("concreteType")));
     }
 
+    // Parse nestedMapType
+    if (obj.has("nestedMapType")) {
+      config.setNestedMapType(TestNestedMapTypeParser.parse(obj.getObject("nestedMapType")));
+    }
   }
 }

@@ -15,6 +15,7 @@ public class TestRootObjectType {
   private TestAdvancedMapType advancedMap;
   private TestEnumListType enumListType;
   private ConcreteType concreteType;
+  private TestNestedMapType nestedMapType;
 
   public String getFoo() {
     return foo;
@@ -104,6 +105,14 @@ public class TestRootObjectType {
     this.concreteType = concreteType;
   }
 
+  public TestNestedMapType getNestedMapType() {
+    return nestedMapType;
+  }
+
+  public void setNestedMapType(TestNestedMapType nestedMapType) {
+    this.nestedMapType = nestedMapType;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -117,6 +126,7 @@ public class TestRootObjectType {
     obj.setAdvancedMap(TestAdvancedMapType.createFullObject());
     obj.setEnumListType(TestEnumListType.createFullObject());
     obj.setConcreteType(ConcreteType.createFullObject());
+    obj.setNestedMapType(TestNestedMapType.createFullObject());
     return obj;
   }
 
@@ -158,6 +168,7 @@ public class TestRootObjectType {
     obj.setAdvancedMap(null);
     obj.setEnumListType(null);
     obj.setConcreteType(null);
+    obj.setNestedMapType(null);
     return obj;
   }
 }
