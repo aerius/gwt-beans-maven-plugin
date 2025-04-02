@@ -14,7 +14,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -24,7 +23,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonKey;
 import com.palantir.javapoet.ClassName;
 
 import io.github.classgraph.ClassGraph;
@@ -252,20 +250,23 @@ public class TypeAnalyzer {
    */
   private boolean isComplexKeyType(Class<?> type) {
     try {
-      boolean hasJsonKey = false;
       boolean hasJsonCreator = false;
+      boolean hasFromStringValue = false;
       
       // Check if the class has a method annotated with @JsonKey
       for (Method method : type.getMethods()) {
-        if (method.isAnnotationPresent(JsonKey.class)) {
-          hasJsonKey = true;
-        }
         if (method.isAnnotationPresent(JsonCreator.class)) {
           hasJsonCreator = true;
         }
+        if (method.getName().equals("fromStringValue") &&
+            method.getParameterCount() == 1 &&
+            method.getParameterTypes()[0].equals(String.class) &&
+            Modifier.isStatic(method.getModifiers())) {
+          hasFromStringValue = true;
+        }
         
-        // If we found both annotations, it's a complex key type
-        if (hasJsonKey && hasJsonCreator) {
+        // If we found either JsonCreator or fromStringValue, it's a complex key type
+        if (hasJsonCreator || hasFromStringValue) {
           return true;
         }
       }
@@ -282,15 +283,5 @@ public class TypeAnalyzer {
       System.out.println("Found custom parser for type: " + type.getName());
     }
     return hasParser;
-  }
-
-  private boolean isCollectionType(Type type) {
-    if (!(type instanceof Class<?>)) {
-      return false;
-    }
-    Class<?> clazz = (Class<?>) type;
-    return List.class.isAssignableFrom(clazz) ||
-        Map.class.isAssignableFrom(clazz) ||
-        Set.class.isAssignableFrom(clazz);
   }
 }

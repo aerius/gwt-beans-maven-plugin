@@ -99,6 +99,7 @@ public class MapFieldParser implements FieldParser {
     final boolean isEnumKey = keyType instanceof Class<?> && ((Class<?>) keyType).isEnum();
     final boolean isIntegerKey = keyType.equals(Integer.class);
     final boolean isComplexKey = keyType instanceof Class<?> && hasJsonKeyAnnotation((Class<?>) keyType);
+    final String jsonCreatorMethodName = isComplexKey ? findJsonCreatorMethodName((Class<?>) keyType) : null;
     final ClassName keyClass;
     if (isEnumKey) {
       keyClass = ClassName.get((Class<?>) keyType);
@@ -145,7 +146,8 @@ public class MapFieldParser implements FieldParser {
         code.addStatement("final $T intKey = $T.parseInt(key)", keyClass, keyClass)
             .addStatement("map.put(intKey, $T.valueOf(mapObj.getString(key)))", valueClass);
       } else if (isComplexKey) {
-        code.addStatement("map.put($T.fromStringValue(key), $T.valueOf(mapObj.getString(key)))", keyClass, valueClass);
+        final String methodName = jsonCreatorMethodName != null ? jsonCreatorMethodName : "fromStringValue";
+        code.addStatement("map.put($T.$L(key), $T.valueOf(mapObj.getString(key)))", keyClass, methodName, valueClass);
       } else {
         code.addStatement("map.put(key, $T.valueOf(mapObj.getString(key)))", valueClass);
       }
@@ -171,8 +173,9 @@ public class MapFieldParser implements FieldParser {
             .addStatement("map.put(intKey, $T.parse(valueObj))",
                 ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
       } else if (isComplexKey) {
-        code.addStatement("map.put($T.fromStringValue(key), $T.parse(valueObj))",
-            keyClass,
+        final String methodName = jsonCreatorMethodName != null ? jsonCreatorMethodName : "fromStringValue";
+            code.addStatement("map.put($T.$L(key), $T.parse(valueObj))",
+            keyClass, methodName,
             ParserWriterUtils.determineParserClassName(((Class<?>) valueType).getSimpleName(), parserPackage));
       } else {
         code.addStatement("map.put(key, $T.parse(valueObj))",
@@ -202,9 +205,10 @@ public class MapFieldParser implements FieldParser {
           .unindent()
           .addStatement("})");
     } else if (isComplexKey) {
+      final String methodName = jsonCreatorMethodName != null ? jsonCreatorMethodName : "fromStringValue";
       code.add("mapObj.keySet().forEach(key -> {\n")
           .indent()
-          .addStatement("map.put($T.fromStringValue(key), mapObj.$L(key))", keyClass, getterMethod)
+          .addStatement("map.put($T.$L(key), mapObj.$L(key))", keyClass, methodName, getterMethod)
           .unindent()
           .addStatement("})");
     } else {
@@ -232,11 +236,44 @@ public class MapFieldParser implements FieldParser {
           return true;
         }
       }
+      // Check if the class has a fromStringValue method
+      for (Method method : clazz.getMethods()) {
+        if (method.getName().equals("fromStringValue") &&
+            method.getParameterCount() == 1 &&
+            method.getParameterTypes()[0].equals(String.class) &&
+            java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+          return true;
+        }
+      }
     } catch (Exception e) {
       // If we can't check the annotations, assume it's not a complex key type
       return false;
     }
     return false;
+  }
+
+  /**
+   * Finds the name of the method annotated with @JsonCreator.
+   * 
+   * @param clazz The class to check
+   * @return The name of the method with @JsonCreator annotation, or null if not found
+   */
+  private String findJsonCreatorMethodName(Class<?> clazz) {
+    try {
+      // Check if the class has a method annotated with @JsonCreator
+      for (Method method : clazz.getMethods()) {
+        if (method.isAnnotationPresent(JsonCreator.class) &&
+            method.getParameterCount() == 1 &&
+            method.getParameterTypes()[0].equals(String.class) &&
+            java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+          return method.getName();
+        }
+      }
+    } catch (Exception e) {
+      // If we can't check the annotations, assume it doesn't have a JsonCreator method
+      return null;
+    }
+    return null;
   }
 
   private void generateCollectionValueMapCode(CodeBlock.Builder code, Field field, Type keyType, Type valueType,
