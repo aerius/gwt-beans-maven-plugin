@@ -26,4 +26,15 @@ public interface FieldParser {
    * @return A code block that parses the field
    */
   CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage);
+
+  /**
+   * Generates code to parse the field from a JSON object.
+   * 
+   * @param field         The field to parse
+   * @param objVarName    The variable name of the JSON object
+   * @param parserPackage The package where generated parsers are located
+   * @param fieldName     The name of the field being parsed, or null if parsing a type directly
+   * @return A code block that parses the field
+   */
+  CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName);
 }

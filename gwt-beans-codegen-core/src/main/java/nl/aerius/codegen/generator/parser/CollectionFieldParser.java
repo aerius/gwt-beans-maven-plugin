@@ -17,7 +17,7 @@ import nl.aerius.codegen.generator.ParserWriterUtils;
 /**
  * Parser for Collection fields (List, Set, etc.) and Object arrays.
  */
-public class CollectionFieldParser implements FieldParser {
+public class CollectionFieldParser implements TypeParser {
   // Collection type implementations
   private static final ClassName ARRAY_LIST = ClassName.get("java.util", "ArrayList");
   private static final ClassName HASH_SET = ClassName.get("java.util", "HashSet");
@@ -35,108 +35,168 @@ public class CollectionFieldParser implements FieldParser {
 
   @Override
   public boolean canHandle(Field field) {
-    Class<?> fieldType = field.getType();
-    return Collection.class.isAssignableFrom(fieldType) ||
-        (fieldType.isArray() && !fieldType.getComponentType().isPrimitive());
+    return canHandle(field.getType());
+  }
+
+  @Override
+  public boolean canHandle(Type type) {
+    if (type instanceof Class<?>) {
+      Class<?> clazz = (Class<?>) type;
+      return Collection.class.isAssignableFrom(clazz) ||
+          (clazz.isArray() && !clazz.getComponentType().isPrimitive());
+    }
+    if (type instanceof ParameterizedType) {
+      ParameterizedType paramType = (ParameterizedType) type;
+      return Collection.class.isAssignableFrom((Class<?>) paramType.getRawType());
+    }
+    return false;
   }
 
   @Override
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    final CodeBlock.Builder code = CodeBlock.builder();
-    final String fieldName = field.getName();
-    final Class<?> fieldType = field.getType();
-
-    code.beginControlFlow(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true));
-
-    if (fieldType.isArray()) {
-      generateArrayParsingCode(code, field, objVarName, fieldType.getComponentType());
-    } else {
-      generateCollectionParsingCode(code, field, objVarName, fieldType, parserPackage);
-    }
-
-    code.endControlFlow();
-    return code.build();
+    return generateParsingCode(field.getType(), objVarName, parserPackage, field.getName());
   }
 
-  private void generateCollectionParsingCode(CodeBlock.Builder code, Field field, String objVarName,
-      Class<?> fieldType, String parserPackage) {
-    final String fieldName = field.getName();
-    // Get the generic type argument (e.g., String from List<String>)
-    final Type genericType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-    final Class<?> elementType = (Class<?>) genericType;
+  @Override
+  public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
+    return generateParsingCode(field.getType(), objVarName, parserPackage, fieldName);
+  }
+
+  @Override
+  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage) {
+    return generateParsingCode(type, objVarName, parserPackage, "value");
+  }
+
+  @Override
+  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
+    if (!(type instanceof java.lang.reflect.ParameterizedType)) {
+      throw new IllegalArgumentException("CollectionFieldParser only handles ParameterizedType");
+    }
+
+    java.lang.reflect.ParameterizedType paramType = (java.lang.reflect.ParameterizedType) type;
+    Type[] typeArgs = paramType.getActualTypeArguments();
+    if (typeArgs.length != 1) {
+      throw new IllegalArgumentException("CollectionFieldParser requires exactly 1 type argument");
+    }
+
+    Type elementType = typeArgs[0];
+
+    return ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true, code -> {
+      generateCollectionParsingCode(code, type, objVarName, fieldName, parserPackage);
+    });
+  }
+
+  private void generateCollectionParsingCode(CodeBlock.Builder code, Type type, String objVarName,
+      String fieldName, String parserPackage) {
+    if (!(type instanceof ParameterizedType)) {
+      throw new IllegalArgumentException("CollectionFieldParser only handles ParameterizedType for collections");
+    }
+    ParameterizedType paramType = (ParameterizedType) type;
+    Type rawType = paramType.getRawType();
+    Type elementType = paramType.getActualTypeArguments()[0];
+
+    // Skip if element type is a wildcard
+    if (elementType.getTypeName().contains("?")) {
+      code.add("// Skipping field with complex generic type: $L", type.getTypeName());
+      return;
+    }
 
     // Determine the appropriate collection implementation
     ClassName collectionImpl;
-    if (fieldType.equals(HashSet.class) || fieldType.equals(Set.class)) {
+    if (rawType.equals(HashSet.class) || rawType.equals(Set.class)) {
       collectionImpl = HASH_SET;
     } else {
       collectionImpl = ARRAY_LIST;
     }
 
     // Check if we have a direct getter method for this element type
-    if (ELEMENT_TYPE_TO_ARRAY_GETTER.containsKey(genericType)) {
-      String getterMethod = ELEMENT_TYPE_TO_ARRAY_GETTER.get(genericType);
+    if (ELEMENT_TYPE_TO_ARRAY_GETTER.containsKey(elementType)) {
+      String getterMethod = ELEMENT_TYPE_TO_ARRAY_GETTER.get(elementType);
       code.addStatement("config.set$L(new $T<>($L.$L($S)))",
           ParserCommonUtils.capitalize(fieldName),
           collectionImpl,
           objVarName,
           getterMethod,
           fieldName);
-    } else if (elementType.isEnum()) {
+    } else if (elementType instanceof Class<?> && ((Class<?>) elementType).isEnum()) {
       // Handle List<Enum> - using forEachString with valueOf
       final ClassName enumType;
-      if (elementType.isMemberClass()) {
+      Class<?> enumClass = (Class<?>) elementType;
+      if (enumClass.isMemberClass()) {
         // For inner enums, we need to include the enclosing class
-        Class<?> enclosingClass = elementType.getEnclosingClass();
+        Class<?> enclosingClass = enumClass.getEnclosingClass();
         enumType = ClassName.get(enclosingClass.getPackage().getName(),
             enclosingClass.getSimpleName(),
-            elementType.getSimpleName());
+            enumClass.getSimpleName());
       } else {
-        enumType = ClassName.get(elementType);
+        enumType = ClassName.get(enumClass);
       }
 
-      code.addStatement("final $T<$T> $L = new $T<>()", fieldType, enumType, fieldName, collectionImpl)
+      code.addStatement("final $T<$T> $L = new $T<>()", rawType, enumType, fieldName, collectionImpl)
           .add("$L.getArray($S).forEachString(str -> {\n", objVarName, fieldName)
           .indent()
           .addStatement("$L.add($T.valueOf(str))", fieldName, enumType)
           .unindent()
           .addStatement("})")
           .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName);
+    } else if (elementType instanceof Class<?>) {
+      // Handle List<CustomObject> - using forEach with parse
+      Class<?> elementClass = (Class<?>) elementType;
+      code.addStatement("final $T<$T> $L = new $T<>()", rawType, elementClass, fieldName, collectionImpl)
+          .add("$L.getArray($S).forEach(item -> {\n", objVarName, fieldName)
+          .indent()
+          .addStatement("$L.add($T.parse(item))", fieldName,
+              ParserWriterUtils.determineParserClassName(elementClass.getSimpleName(), parserPackage))
+          .unindent()
+          .addStatement("})")
+          .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName);
     } else {
-      // Handle complex element types that require custom parsing
-      final String elementTypeName = ((Class<?>) genericType).getSimpleName();
-      code.addStatement("final $T<$T> $L = new $T<>()", collectionImpl, genericType, fieldName + "List", collectionImpl)
-          .addStatement("$L.getArray($S).forEach(element -> $L.add($T.parse(element)))", 
-              objVarName, fieldName, fieldName + "List",
-              ParserWriterUtils.determineParserClassName(elementTypeName, parserPackage))
-          .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName + "List");
+      code.addStatement("// Unsupported collection element type: $L", elementType.getTypeName());
     }
   }
 
-  private void generateArrayParsingCode(CodeBlock.Builder code, Field field, String objVarName,
-      Class<?> componentType) {
-    final String fieldName = field.getName();
-
+  private void generateArrayParsingCode(CodeBlock.Builder code, String objVarName, String fieldName,
+          Class<?> componentType) {
     // Check if we have a direct getter method for this component type
     if (ELEMENT_TYPE_TO_ARRAY_GETTER.containsKey(componentType)) {
       String getterMethod = ELEMENT_TYPE_TO_ARRAY_GETTER.get(componentType);
-
-      if (componentType.equals(String.class)) {
-        code.addStatement("config.set$L($L.$L($S))",
-            ParserCommonUtils.capitalize(fieldName),
-            objVarName,
-            getterMethod,
-            fieldName);
+      code.addStatement("config.set$L($L.$L($S))",
+          ParserCommonUtils.capitalize(fieldName),
+          objVarName,
+          getterMethod,
+          fieldName);
+    } else if (componentType.isEnum()) {
+      // Handle Enum[] - using forEachString with valueOf
+      final ClassName enumType;
+      if (componentType.isMemberClass()) {
+        // For inner enums, we need to include the enclosing class
+        Class<?> enclosingClass = componentType.getEnclosingClass();
+        enumType = ClassName.get(enclosingClass.getPackage().getName(),
+            enclosingClass.getSimpleName(),
+            componentType.getSimpleName());
       } else {
-        code.addStatement("config.set$L($L.$L($S).toArray(new $T[0]))",
-            ParserCommonUtils.capitalize(fieldName),
-            objVarName,
-            getterMethod,
-            fieldName,
-            componentType);
+        enumType = ClassName.get(componentType);
       }
+
+      code.addStatement("final $T[] $L = new $T[$L.getArray($S).length()]",
+          componentType, fieldName, componentType, objVarName, fieldName)
+          .add("$L.getArray($S).forEachString((str, index) -> {\n", objVarName, fieldName)
+          .indent()
+          .addStatement("$L[index] = $T.valueOf(str)", fieldName, enumType)
+          .unindent()
+          .addStatement("})")
+          .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName);
     } else {
-      code.addStatement("// Unsupported array component type: $L", componentType.getName());
+      // Handle CustomObject[] - using forEach with parse
+      code.addStatement("final $T[] $L = new $T[$L.getArray($S).length()]",
+          componentType, fieldName, componentType, objVarName, fieldName)
+          .add("$L.getArray($S).forEach((item, index) -> {\n", objVarName, fieldName)
+          .indent()
+          .addStatement("$L[index] = $T.parse(item)", fieldName,
+              ParserWriterUtils.determineParserClassName(componentType.getSimpleName(), "nl.aerius.codegen.generator"))
+          .unindent()
+          .addStatement("})")
+          .addStatement("config.set$L($L)", ParserCommonUtils.capitalize(fieldName), fieldName);
     }
   }
 }

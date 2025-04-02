@@ -1,6 +1,7 @@
 package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,7 +10,7 @@ import com.palantir.javapoet.CodeBlock;
 /**
  * Parser for simple field types like primitives and their wrappers.
  */
-public class SimpleFieldParser implements FieldParser {
+public class SimpleFieldParser implements TypeParser {
   private static final Map<Class<?>, String> TYPE_TO_GETTER_METHOD = new HashMap<>();
   private static final Map<Class<?>, Boolean> TYPE_IS_WRAPPER = new HashMap<>();
 
@@ -34,7 +35,7 @@ public class SimpleFieldParser implements FieldParser {
     TYPE_TO_GETTER_METHOD.put(Character.class, "getString");
 
     // Initialize wrapper type mapping
-    TYPE_IS_WRAPPER.put(String.class, false);
+    TYPE_IS_WRAPPER.put(String.class, true);
     TYPE_IS_WRAPPER.put(int.class, false);
     TYPE_IS_WRAPPER.put(Integer.class, true);
     TYPE_IS_WRAPPER.put(long.class, false);
@@ -55,30 +56,52 @@ public class SimpleFieldParser implements FieldParser {
 
   @Override
   public boolean canHandle(Field field) {
-    Class<?> fieldType = field.getType();
-    return TYPE_TO_GETTER_METHOD.containsKey(fieldType) &&
-        !fieldType.isArray() &&
-        !fieldType.isEnum();
+    return canHandle(field.getType());
+  }
+
+  @Override
+  public boolean canHandle(Type type) {
+    if (!(type instanceof Class<?>)) {
+      return false;
+    }
+    Class<?> clazz = (Class<?>) type;
+    return TYPE_TO_GETTER_METHOD.containsKey(clazz) &&
+        !clazz.isArray() &&
+        !clazz.isEnum();
   }
 
   @Override
   public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    final CodeBlock.Builder code = CodeBlock.builder();
-    final String fieldName = field.getName();
-    final Class<?> fieldType = field.getType();
+    return generateParsingCode(field.getType(), objVarName, parserPackage, field.getName());
+  }
 
-    String getterMethod = TYPE_TO_GETTER_METHOD.get(fieldType);
-    boolean isWrapper = TYPE_IS_WRAPPER.getOrDefault(fieldType, false);
+  @Override
+  public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
+    return generateParsingCode(field.getType(), objVarName, parserPackage, fieldName);
+  }
 
-    addSimpleFieldSetter(code, objVarName, fieldName, getterMethod, isWrapper, fieldType);
+  @Override
+  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage) {
+    return generateParsingCode(type, objVarName, parserPackage, "value");
+  }
 
-    return code.build();
+  @Override
+  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
+    if (!(type instanceof Class<?>)) {
+      throw new IllegalArgumentException("SimpleFieldParser only handles Class types");
+    }
+    Class<?> clazz = (Class<?>) type;
+
+    String getterMethod = TYPE_TO_GETTER_METHOD.get(clazz);
+    boolean isWrapper = TYPE_IS_WRAPPER.getOrDefault(clazz, false);
+
+    return ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, isWrapper, code -> {
+      addSimpleFieldSetter(code, objVarName, fieldName, getterMethod, isWrapper, clazz);
+    });
   }
 
   private void addSimpleFieldSetter(CodeBlock.Builder code, String objVarName, String fieldName,
       String getterMethod, boolean isWrapper, Class<?> fieldType) {
-    code.beginControlFlow(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, isWrapper));
-
     if (getterMethod.equals("getInteger")) {
       if (fieldType.equals(byte.class) || fieldType.equals(Byte.class)) {
         code.addStatement("config.set$L((byte) $L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName,
@@ -92,11 +115,16 @@ public class SimpleFieldParser implements FieldParser {
         code.addStatement("config.set$L($L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName, getterMethod,
             fieldName);
       }
-    } else if (getterMethod.equals("getString") && fieldName.toLowerCase().contains("char")) {
-      code.addStatement("String charStr = $L.$L($S)", objVarName, getterMethod, fieldName)
-          .beginControlFlow("if (charStr != null && !charStr.isEmpty())")
-          .addStatement("config.set$L(charStr.charAt(0))", ParserCommonUtils.capitalize(fieldName))
-          .endControlFlow();
+    } else if (getterMethod.equals("getString")) {
+      if (fieldType.equals(char.class) || fieldType.equals(Character.class)) {
+        code.addStatement("String charStr = $L.$L($S)", objVarName, getterMethod, fieldName)
+            .beginControlFlow("if (charStr != null && !charStr.isEmpty())")
+            .addStatement("config.set$L(charStr.charAt(0))", ParserCommonUtils.capitalize(fieldName))
+            .endControlFlow();
+      } else {
+        code.addStatement("config.set$L($L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName, getterMethod,
+            fieldName);
+      }
     } else if (getterMethod.equals("getNumber")) {
       if (fieldType.equals(float.class) || fieldType.equals(Float.class)) {
         code.addStatement("config.set$L($L.$L($S).floatValue())", ParserCommonUtils.capitalize(fieldName), objVarName,
@@ -120,8 +148,5 @@ public class SimpleFieldParser implements FieldParser {
       code.addStatement("config.set$L($L.$L($S))", ParserCommonUtils.capitalize(fieldName), objVarName, getterMethod,
           fieldName);
     }
-
-    code.endControlFlow();
-    code.add("\n");
   }
 }

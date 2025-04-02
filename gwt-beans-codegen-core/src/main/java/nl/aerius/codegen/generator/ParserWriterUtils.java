@@ -152,6 +152,26 @@ public final class ParserWriterUtils {
   }
 
   /**
+   * Determines which parser to use for a given Type, either custom or generated.
+   * 
+   * @param type          The Type to get a parser for
+   * @param parserPackage The package where generated parsers are located
+   * @return A JavaPoet ClassName representing the appropriate parser to use
+   */
+  public static ClassName determineParserClassName(Type type, String parserPackage) {
+    if (type instanceof Class<?>) {
+      return determineParserClassName((Class<?>) type, parserPackage);
+    } else if (type instanceof java.lang.reflect.ParameterizedType) {
+      java.lang.reflect.ParameterizedType paramType = (java.lang.reflect.ParameterizedType) type;
+      Type rawType = paramType.getRawType();
+      if (rawType instanceof Class<?>) {
+        return determineParserClassName((Class<?>) rawType, parserPackage);
+      }
+    }
+    throw new IllegalArgumentException("Cannot determine parser class name for type: " + type.getTypeName());
+  }
+
+  /**
    * Cleans up the output directory by removing all .java files.
    */
   public static void clearOutputDirectory(String outputDir) throws IOException {
@@ -262,36 +282,53 @@ public final class ParserWriterUtils {
   }
 
   private static CodeBlock generateFieldParsingCode(Field field, String objVarName, String parserPackage) {
+    // Delegate to type-based parsing for backward compatibility
+    return generateTypeParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
+  }
+
+  /**
+   * Generates code to parse a value of the given type from a JSON object.
+   * This is the new type-based parsing method that supports nested types.
+   */
+  private static CodeBlock generateTypeParsingCode(Type type, String objVarName, String parserPackage) {
+    return generateTypeParsingCode(type, objVarName, parserPackage, null);
+  }
+
+  /**
+   * Generates code to parse a value of the given type from a JSON object.
+   * This is the new type-based parsing method that supports nested types.
+   */
+  private static CodeBlock generateTypeParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
     // Try the SimpleFieldParser first
-    if (SIMPLE_FIELD_PARSER.canHandle(field)) {
-      return SIMPLE_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    if (SIMPLE_FIELD_PARSER.canHandle(type)) {
+      return SIMPLE_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
     }
 
     // Try the EnumFieldParser
-    if (ENUM_FIELD_PARSER.canHandle(field)) {
-      return ENUM_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    if (ENUM_FIELD_PARSER.canHandle(type)) {
+      return ENUM_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
     }
 
     // Try the CollectionFieldParser (includes object arrays)
-    if (COLLECTION_FIELD_PARSER.canHandle(field)) {
-      return COLLECTION_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    if (COLLECTION_FIELD_PARSER.canHandle(type)) {
+      return COLLECTION_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
     }
 
     // Try the MapFieldParser
-    if (MAP_FIELD_PARSER.canHandle(field)) {
-      return MAP_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    if (MAP_FIELD_PARSER.canHandle(type)) {
+      return MAP_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
     }
 
     // Try the PrimitiveArrayFieldParser
-    if (PRIMITIVE_ARRAY_FIELD_PARSER.canHandle(field)) {
-      return PRIMITIVE_ARRAY_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    if (PRIMITIVE_ARRAY_FIELD_PARSER.canHandle(type)) {
+      return PRIMITIVE_ARRAY_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
     }
 
     // Try the CustomObjectFieldParser
-    if (CUSTOM_OBJECT_FIELD_PARSER.canHandle(field)) {
-      return CUSTOM_OBJECT_FIELD_PARSER.generateParsingCode(field, objVarName, parserPackage);
+    if (CUSTOM_OBJECT_FIELD_PARSER.canHandle(type)) {
+      return CUSTOM_OBJECT_FIELD_PARSER.generateParsingCode(type, objVarName, parserPackage, fieldName);
     }
 
-    throw new IllegalArgumentException("No parser found for field: " + field.getName());
+    throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
   }
 }

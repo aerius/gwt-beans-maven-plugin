@@ -31,7 +31,7 @@ public class AbstractMiddleTypeParser {
     BaseTypeParser.parse(obj, config);
 
     // Parse middle
-    if (obj.has("middle")) {
+    if (obj.has("middle") && !obj.isNull("middle")) {
       config.setMiddle(obj.getString("middle"));
     }
   }

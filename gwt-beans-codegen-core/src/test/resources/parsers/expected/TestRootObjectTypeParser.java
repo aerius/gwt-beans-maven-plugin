@@ -32,7 +32,7 @@ public class TestRootObjectTypeParser {
     }
 
     // Parse foo
-    if (obj.has("foo")) {
+    if (obj.has("foo") && !obj.isNull("foo")) {
       config.setFoo(obj.getString("foo"));
     }
 
@@ -47,47 +47,47 @@ public class TestRootObjectTypeParser {
     }
 
     // Parse simpleCollection
-    if (obj.has("simpleCollection")) {
+    if (obj.has("simpleCollection") && !obj.isNull("simpleCollection")) {
       config.setSimpleCollection(TestSimpleCollectionTypeParser.parse(obj.getObject("simpleCollection")));
     }
 
     // Parse simpleTypes
-    if (obj.has("simpleTypes")) {
+    if (obj.has("simpleTypes") && !obj.isNull("simpleTypes")) {
       config.setSimpleTypes(TestSimpleTypesTypeParser.parse(obj.getObject("simpleTypes")));
     }
 
     // Parse customParserType
-    if (obj.has("customParserType")) {
+    if (obj.has("customParserType") && !obj.isNull("customParserType")) {
       config.setCustomParserType(TestCustomParserTypeParser.parse(obj.getObject("customParserType")));
     }
 
     // Parse enumType
-    if (obj.has("enumType")) {
+    if (obj.has("enumType") && !obj.isNull("enumType")) {
       config.setEnumType(TestEnumTypeParser.parse(obj.getObject("enumType")));
     }
 
     // Parse complexCollection
-    if (obj.has("complexCollection")) {
+    if (obj.has("complexCollection") && !obj.isNull("complexCollection")) {
       config.setComplexCollection(TestComplexCollectionTypeParser.parse(obj.getObject("complexCollection")));
     }
 
     // Parse advancedMap
-    if (obj.has("advancedMap")) {
+    if (obj.has("advancedMap") && !obj.isNull("advancedMap")) {
       config.setAdvancedMap(TestAdvancedMapTypeParser.parse(obj.getObject("advancedMap")));
     }
 
     // Parse enumListType
-    if (obj.has("enumListType")) {
+    if (obj.has("enumListType") && !obj.isNull("enumListType")) {
       config.setEnumListType(TestEnumListTypeParser.parse(obj.getObject("enumListType")));
     }
 
     // Parse concreteType
-    if (obj.has("concreteType")) {
+    if (obj.has("concreteType") && !obj.isNull("concreteType")) {
       config.setConcreteType(ConcreteTypeParser.parse(obj.getObject("concreteType")));
     }
 
     // Parse nestedMapType
-    if (obj.has("nestedMapType")) {
+    if (obj.has("nestedMapType") && !obj.isNull("nestedMapType")) {
       config.setNestedMapType(TestNestedMapTypeParser.parse(obj.getObject("nestedMapType")));
     }
   }

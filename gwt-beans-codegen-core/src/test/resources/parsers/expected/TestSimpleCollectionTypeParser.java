@@ -37,7 +37,7 @@ public class TestSimpleCollectionTypeParser {
     }
 
     // Parse sanity
-    if (obj.has("sanity")) {
+    if (obj.has("sanity") && !obj.isNull("sanity")) {
       config.setSanity(obj.getString("sanity"));
     }
 
