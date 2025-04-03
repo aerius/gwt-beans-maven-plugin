@@ -15,27 +15,27 @@ public class ConcreteTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static ConcreteType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static ConcreteType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final ConcreteType config = new ConcreteType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final ConcreteType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final ConcreteType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse fields from parent class (AbstractMiddleType)
-    AbstractMiddleTypeParser.parse(obj, config);
+    AbstractMiddleTypeParser.parse(baseObj, config);
 
     // Parse outer
-    if (obj.has("outer") && !obj.isNull("outer")) {
-      final String value = obj.getString("outer");
+    if (baseObj.has("outer") && !baseObj.isNull("outer")) {
+      final String value = baseObj.getString("outer");
       config.setOuter(value);
     }
   }

@@ -24,43 +24,43 @@ public class TestEnumListTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestEnumListType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static TestEnumListType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final TestEnumListType config = new TestEnumListType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final TestEnumListType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestEnumListType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse statusList
-    if (obj.has("statusList") && !obj.isNull("statusList")) {
+    if (baseObj.has("statusList") && !baseObj.isNull("statusList")) {
       final List<TestEnumType.Status> statusList = new ArrayList<>();
-      obj.getArray("statusList").forEachString(str -> {
+      baseObj.getArray("statusList").forEachString(str -> {
         statusList.add(TestEnumType.Status.valueOf(str));
       });
       config.setStatusList(statusList);
     }
 
     // Parse statusSet
-    if (obj.has("statusSet") && !obj.isNull("statusSet")) {
+    if (baseObj.has("statusSet") && !baseObj.isNull("statusSet")) {
       final Set<TestEnumType.Status> statusSet = new HashSet<>();
-      obj.getArray("statusSet").forEachString(str -> {
+      baseObj.getArray("statusSet").forEachString(str -> {
         statusSet.add(TestEnumType.Status.valueOf(str));
       });
       config.setStatusSet(statusSet);
     }
 
     // Parse statusMap
-    if (obj.has("statusMap") && !obj.isNull("statusMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("statusMap");
-      final Map<String, TestEnumType.Status> level1Map = new LinkedHashMap<>();
+    if (baseObj.has("statusMap") && !baseObj.isNull("statusMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("statusMap");
+      final Map<String, TestEnumType.Status> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(level1Key -> {
         final String level2Str = mapObj.getString(level1Key);
         TestEnumType.Status level2Value = null;
@@ -68,18 +68,17 @@ public class TestEnumListTypeParser {
           try {
             level2Value = TestEnumType.Status.valueOf(level2Str);
           } catch (IllegalArgumentException e) {
-            // Match generated comment
             // Invalid enum value "[level2Str]", leaving level2Value as null;
           }
         }
-        level1Map.put(level1Key, level2Value);
+        map.put(level1Key, level2Value);
       });
-      config.setStatusMap(level1Map);
+      config.setStatusMap(map);
     }
 
     // Parse description
-    if (obj.has("description") && !obj.isNull("description")) {
-      final String value = obj.getString("description");
+    if (baseObj.has("description") && !baseObj.isNull("description")) {
+      final String value = baseObj.getString("description");
       config.setDescription(value);
     }
 

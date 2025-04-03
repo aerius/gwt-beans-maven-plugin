@@ -6,9 +6,13 @@ import javax.annotation.processing.Generated;
 import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
 import nl.aerius.codegen.test.types.ConcreteType;
 import nl.aerius.codegen.test.types.TestAdvancedMapType;
+import nl.aerius.codegen.test.types.TestComplexCollectionType;
+import nl.aerius.codegen.test.types.TestCustomParserType;
 import nl.aerius.codegen.test.types.TestEnumListType;
+import nl.aerius.codegen.test.types.TestEnumType;
 import nl.aerius.codegen.test.types.TestNestedMapType;
 import nl.aerius.codegen.test.types.TestRootObjectType;
+import nl.aerius.codegen.test.types.TestSimpleTypesType;
 import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
@@ -21,83 +25,87 @@ public class TestRootObjectTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestRootObjectType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static TestRootObjectType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final TestRootObjectType config = new TestRootObjectType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final TestRootObjectType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestRootObjectType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse foo
-    if (obj.has("foo") && !obj.isNull("foo")) {
-      config.setFoo(obj.getString("foo"));
+    if (baseObj.has("foo") && !baseObj.isNull("foo")) {
+      config.setFoo(baseObj.getString("foo"));
     }
 
     // Parse count
-    if (obj.has("count")) {
-      config.setCount(obj.getInteger("count"));
+    if (baseObj.has("count")) {
+      config.setCount(baseObj.getInteger("count"));
     }
 
     // Parse active
-    if (obj.has("active")) {
-      config.setActive(obj.getBoolean("active"));
+    if (baseObj.has("active")) {
+      config.setActive(baseObj.getBoolean("active"));
     }
 
     // Parse simpleCollection
-    if (obj.has("simpleCollection") && !obj.isNull("simpleCollection")) {
-      config.setSimpleCollection(TestSimpleCollectionTypeParser.parse(obj.getObject("simpleCollection")));
+    if (baseObj.has("simpleCollection") && !baseObj.isNull("simpleCollection")) {
+      config.setSimpleCollection(TestSimpleCollectionTypeParser.parse(baseObj.getObject("simpleCollection")));
     }
 
     // Parse simpleTypes
-    if (obj.has("simpleTypes") && !obj.isNull("simpleTypes")) {
-      config.setSimpleTypes(TestSimpleTypesTypeParser.parse(obj.getObject("simpleTypes")));
+    if (baseObj.has("simpleTypes") && !baseObj.isNull("simpleTypes")) {
+      final TestSimpleTypesType value = TestSimpleTypesTypeParser.parse(baseObj.getObject("simpleTypes"));
+      config.setSimpleTypes(value);
     }
 
     // Parse customParserType
-    if (obj.has("customParserType") && !obj.isNull("customParserType")) {
-      config.setCustomParserType(TestCustomParserTypeParser.parse(obj.getObject("customParserType")));
+    if (baseObj.has("customParserType") && !baseObj.isNull("customParserType")) {
+      final TestCustomParserType value = TestCustomParserTypeParser.parse(baseObj.getObject("customParserType"));
+      config.setCustomParserType(value);
     }
 
     // Parse enumType
-    if (obj.has("enumType") && !obj.isNull("enumType")) {
-      config.setEnumType(TestEnumTypeParser.parse(obj.getObject("enumType")));
+    if (baseObj.has("enumType") && !baseObj.isNull("enumType")) {
+      final TestEnumType value = TestEnumTypeParser.parse(baseObj.getObject("enumType"));
+      config.setEnumType(value);
     }
 
     // Parse complexCollection
-    if (obj.has("complexCollection") && !obj.isNull("complexCollection")) {
-      config.setComplexCollection(TestComplexCollectionTypeParser.parse(obj.getObject("complexCollection")));
+    if (baseObj.has("complexCollection") && !baseObj.isNull("complexCollection")) {
+      final TestComplexCollectionType value = TestComplexCollectionTypeParser.parse(baseObj.getObject("complexCollection"));
+      config.setComplexCollection(value);
     }
 
     // Parse advancedMap
-    if (obj.has("advancedMap") && !obj.isNull("advancedMap")) {
-      final TestAdvancedMapType level1Value = TestAdvancedMapTypeParser.parse(obj.getObject("advancedMap"));
-      config.setAdvancedMap(level1Value);
+    if (baseObj.has("advancedMap") && !baseObj.isNull("advancedMap")) {
+      final TestAdvancedMapType value = TestAdvancedMapTypeParser.parse(baseObj.getObject("advancedMap"));
+      config.setAdvancedMap(value);
     }
 
     // Parse enumListType
-    if (obj.has("enumListType") && !obj.isNull("enumListType")) {
-      final TestEnumListType level1Value = TestEnumListTypeParser.parse(obj.getObject("enumListType"));
-      config.setEnumListType(level1Value);
+    if (baseObj.has("enumListType") && !baseObj.isNull("enumListType")) {
+      final TestEnumListType value = TestEnumListTypeParser.parse(baseObj.getObject("enumListType"));
+      config.setEnumListType(value);
     }
 
     // Parse concreteType
-    if (obj.has("concreteType") && !obj.isNull("concreteType")) {
-      final ConcreteType level1Value = ConcreteTypeParser.parse(obj.getObject("concreteType"));
-      config.setConcreteType(level1Value);
+    if (baseObj.has("concreteType") && !baseObj.isNull("concreteType")) {
+      final ConcreteType value = ConcreteTypeParser.parse(baseObj.getObject("concreteType"));
+      config.setConcreteType(value);
     }
 
     // Parse nestedMapType
-    if (obj.has("nestedMapType") && !obj.isNull("nestedMapType")) {
-      final TestNestedMapType level1Value = TestNestedMapTypeParser.parse(obj.getObject("nestedMapType"));
-      config.setNestedMapType(level1Value);
+    if (baseObj.has("nestedMapType") && !baseObj.isNull("nestedMapType")) {
+      final TestNestedMapType value = TestNestedMapTypeParser.parse(baseObj.getObject("nestedMapType"));
+      config.setNestedMapType(value);
     }
   }
 }

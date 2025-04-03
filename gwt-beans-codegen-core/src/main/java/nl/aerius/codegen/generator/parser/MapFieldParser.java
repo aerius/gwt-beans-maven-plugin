@@ -80,36 +80,36 @@ public class MapFieldParser implements TypeParser {
     Type valueType = mapType.getActualTypeArguments()[1];
     ClassName mapImpl = ClassName.get(java.util.LinkedHashMap.class);
 
-    String levelMapVar = "level" + level + "Map";
-    String levelObjVar = "level" + level + "Obj";
-    String levelKeyVar = "level" + level + "Key";
+    String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
+    String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");
+    String keyVar = ParserCommonUtils.getVariableNameForLevel(level, "Key");
 
-    code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONObjectHandle(), levelObjVar, accessExpression);
+    code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONObjectHandle(), objVar, accessExpression);
 
-    code.addStatement("final $T<$T, $T> $L = new $T<>()", Map.class, keyType, valueType, levelMapVar, mapImpl);
+    code.addStatement("final $T<$T, $T> $L = new $T<>()", Map.class, keyType, valueType, mapVar, mapImpl);
 
-    code.add("$L.keySet().forEach($L -> {\n", levelObjVar, levelKeyVar)
+    code.add("$L.keySet().forEach($L -> {\n", objVar, keyVar)
         .indent();
 
     CodeBlock valueAccessExpression = ParserCommonUtils.createFieldAccessCode(
         valueType,
-        levelObjVar,
-        CodeBlock.of("$L", levelKeyVar));
+        objVar,
+        CodeBlock.of("$L", keyVar));
 
     String valueVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
         code,
         valueType,
-        levelObjVar,
-        parserPackage,
+        objVar,
+            parserPackage,
         valueAccessExpression,
-            level + 1);
+        level + 1);
 
-    addPutStatement(code, levelMapVar, keyType, levelKeyVar, valueVarName);
+    addPutStatement(code, mapVar, keyType, keyVar, valueVarName);
 
     code.unindent()
         .addStatement("})");
 
-    return levelMapVar;
+    return mapVar;
   }
 
   private void addPutStatement(CodeBlock.Builder code, String mapVar, Type keyType, String keyVar, String valueVar) {

@@ -251,9 +251,9 @@ public final class ParserWriterUtils {
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
         .returns(targetClassName)
-        .addParameter(ParserCommonUtils.getJSONObjectHandle(), "obj", Modifier.FINAL);
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, Modifier.FINAL);
 
-    methodBuilder.beginControlFlow("if (obj == null)")
+    methodBuilder.beginControlFlow("if ($L == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
         .addStatement("return null")
         .endControlFlow();
 
@@ -262,7 +262,7 @@ public final class ParserWriterUtils {
       methodBuilder.addStatement("throw new UnsupportedOperationException(\"Cannot create an instance of an abstract class\")");
     } else {
       methodBuilder.addStatement("final $T config = new $T()", targetClass, targetClass)
-          .addStatement("parse(obj, config)")
+          .addStatement("parse($L, config)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
           .addStatement("return config");
     }
 
@@ -274,10 +274,10 @@ public final class ParserWriterUtils {
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
         .returns(void.class)
-        .addParameter(ParserCommonUtils.getJSONObjectHandle(), "obj", Modifier.FINAL)
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, Modifier.FINAL)
         .addParameter(targetClassName, "config", Modifier.FINAL);
 
-    methodBuilder.beginControlFlow("if (obj == null)")
+    methodBuilder.beginControlFlow("if ($L == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
         .addStatement("return")
         .endControlFlow();
 
@@ -285,7 +285,7 @@ public final class ParserWriterUtils {
     Class<?> superclass = targetClass.getSuperclass();
     if (superclass != null && superclass != Object.class) {
       methodBuilder.addComment(String.format("Parse fields from parent class (%s)", superclass.getSimpleName()))
-          .addStatement("$T.parse(obj, config)", determineParserClassName(superclass, parserPackage));
+          .addStatement("$T.parse($L, config)", determineParserClassName(superclass, parserPackage), ParserCommonUtils.BASE_OBJECT_PARAM_NAME);
     }
 
     // Process all fields
@@ -298,20 +298,20 @@ public final class ParserWriterUtils {
         // Determine if null check is required (true for non-primitives)
         boolean requireNonNull = !ParserCommonUtils.isPrimitiveType(field.getGenericType());
         methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck(
-            "obj",
+            ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
             field.getName(),
             requireNonNull, // Pass determined value
             innerCode -> {
               // Pass CodeBlock representing the field name string literal
               CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
                   field.getGenericType(),
-                  "obj",
+                  ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
                   CodeBlock.of("$S", field.getName()));
 
               String resultVar = dispatchGenerateParsingCodeInto(
                   innerCode,
                   field.getGenericType(),
-                  "obj", // Top level object
+                  ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
                   parserPackage,
                   fieldAccess, // Pass the code to access the field's data
                   1 // Start top-level fields at level 1

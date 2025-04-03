@@ -89,7 +89,9 @@ public class CollectionFieldParser implements TypeParser {
       CodeBlock accessExpression, int level) {
     Type elementType = collectionType.getActualTypeArguments()[0];
     Type rawCollectionType = collectionType.getRawType();
-    String resultVarName = "level" + level + "List"; // Default name
+    // Use helper for resultVarName prefix
+    String resultVarPrefix = Set.class.isAssignableFrom((Class<?>) rawCollectionType) ? "Set" : "List";
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, resultVarPrefix);
 
     // Skip if element type is a wildcard or TypeVariable for now
     if (elementType instanceof java.lang.reflect.WildcardType || elementType instanceof java.lang.reflect.TypeVariable) {
@@ -105,41 +107,47 @@ public class CollectionFieldParser implements TypeParser {
     if (Set.class.isAssignableFrom((Class<?>) rawCollectionType)) {
       collectionImpl = HASH_SET;
       collectionInterface = Set.class;
-      resultVarName = "level" + level + "Set";
     } else { // Default to List/ArrayList
       collectionImpl = ARRAY_LIST;
       collectionInterface = java.util.List.class;
-      resultVarName = "level" + level + "List";
     }
 
-    String arrayVar = "level" + level + "Array";
-    String itemVar = "level" + level + "Item";
+    // Use helper for other variables
+    String arrayVar = ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
 
     // 1. Get the JSON Array
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayVar, accessExpression);
     // 2. Create the Collection instance
     code.addStatement("final $T<$T> $L = new $T<>()", collectionInterface, elementType, resultVarName, collectionImpl);
-    // 3. Loop over the JSON Array
-    // Assuming forEach supplies the item in a usable format (JSONObjectHandle, primitive wrapper, etc.)
-    code.add("$L.forEach($L -> {\n", arrayVar, itemVar)
-        .indent();
 
-    // 4. Dispatch parsing for the element type
-    // The access expression for the element is just the loop variable 'itemVar'
-    String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
-        code,
-        elementType,
-        null, // No parent JSON object variable needed if itemVar holds the data directly
-        parserPackage,
-        CodeBlock.of("$L", itemVar), // Access the element via the loop variable
-        level + 1);
+    // Check if a specific forEach exists for the element type
+    String specificForEach = getSpecificForEachMethod(elementType);
 
-    // 5. Add the parsed element to the collection
-    code.addStatement("$L.add($L)", resultVarName, elementVarName);
+    if (specificForEach != null) {
+      // 3a. Use specific forEachXxx method directly
+      code.addStatement("$L.$L($L::add)", arrayVar, specificForEach, resultVarName);
+    } else {
+      // 3b. Use generic forEach loop for complex types or types without specific method (e.g., Boolean)
+      code.add("$L.forEach($L -> {\n", arrayVar, itemVar)
+          .indent();
 
-    // 6. End loop
-    code.unindent()
-        .addStatement("})");
+        // 4. Dispatch parsing for the element type
+        String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
+                code,
+            elementType,
+            null,
+            parserPackage,
+            CodeBlock.of("$L", itemVar), // Access the element via the loop variable
+            level + 1);
+
+        // 5. Add the parsed element to the collection
+        code.addStatement("$L.add($L)", resultVarName, elementVarName);
+
+        // 6. End loop
+        code.unindent()
+            .addStatement("})");
+      }
 
     return resultVarName;
   }
@@ -148,18 +156,20 @@ public class CollectionFieldParser implements TypeParser {
   private String generateObjectArrayParsingCodeInto(CodeBlock.Builder code, Class<?> arrayClass, String objVarName, String parserPackage,
       CodeBlock accessExpression, int level) {
     Class<?> componentType = arrayClass.getComponentType();
-    String resultVarName = "level" + level + "Array";
-    String arrayJsonVar = "level" + level + "JsonArray";
-    String itemVar = "level" + level + "Item";
-    String indexVar = "level" + level + "Index";
+    // Use helper for variable names
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    String arrayJsonVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
+    String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
+    String indexVar = ParserCommonUtils.getVariableNameForLevel(level, "Index");
 
     // 1. Get the JSON Array
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayJsonVar, accessExpression);
     // 2. Create the Java Array instance
+    // Use length() method of JSONArrayHandle
     code.addStatement("final $T[] $L = new $T[$L.length()]",
-        componentType, resultVarName, componentType, arrayJsonVar);
-    // 3. Loop over the JSON Array
-    code.add("$L.forEach(($L, $L) -> {\n", arrayJsonVar, itemVar, indexVar)
+            componentType, resultVarName, componentType, arrayJsonVar);
+    // 3. Loop over the JSON Array using forEachWithIndex
+    code.add("$L.forEachWithIndex(($L, $L) -> {\n", arrayJsonVar, itemVar, indexVar)
         .indent();
 
     // 4. Dispatch parsing for the component type
@@ -185,11 +195,12 @@ public class CollectionFieldParser implements TypeParser {
   private String generateGenericArrayParsingCodeInto(CodeBlock.Builder code, java.lang.reflect.GenericArrayType arrayType, String objVarName,
       String parserPackage, CodeBlock accessExpression, int level) {
     Type componentType = arrayType.getGenericComponentType();
-    String resultVarName = "level" + level + "Array";
-    String arrayJsonVar = "level" + level + "JsonArray";
-    String itemVar = "level" + level + "Item";
-    String indexVar = "level" + level + "Index";
-    String tempListVar = "level" + level + "TempList"; // Need intermediate list
+    // Use helper for variable names
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    String arrayJsonVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
+    String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
+    String indexVar = ParserCommonUtils.getVariableNameForLevel(level, "Index"); // Although index isn't used by generic forEach
+    String tempListVar = ParserCommonUtils.getVariableNameForLevel(level, "TempList");
 
     // Cannot directly create generic array T[]. Create List first, then convert.
     // 1. Get the JSON Array
@@ -197,7 +208,7 @@ public class CollectionFieldParser implements TypeParser {
     // 2. Create intermediate List
     code.addStatement("final $T<$T> $L = new $T<>()", java.util.List.class, componentType, tempListVar, java.util.ArrayList.class);
 
-    // 3. Loop over JSON Array, parse elements into List
+    // 3. Loop over JSON Array, parse elements into List (use generic forEach)
     code.add("$L.forEach($L -> {\n", arrayJsonVar, itemVar)
         .indent();
     String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
@@ -211,13 +222,23 @@ public class CollectionFieldParser implements TypeParser {
     code.unindent()
         .addStatement("})");
 
-    // 4. Convert List to Array (This requires reflection or assumptions about componentType)
-    //    This part is complex and might not be universally solvable without runtime class info.
-    //    For now, we'll generate a comment and assign null.
+    // 4. Convert List to Array (Commented out / placeholder)
     code.addStatement("// TODO: Convert $L to array of $L", tempListVar, componentType.getTypeName());
     code.addStatement("final $T[] $L = null; // Cannot directly create generic array", Object.class, resultVarName);
 
     return resultVarName;
+  }
+
+  // Helper method to get the specific forEach method name
+  private String getSpecificForEachMethod(Type elementType) {
+    if (elementType.equals(String.class)) {
+      return "forEachString";
+    } else if (elementType.equals(Integer.class)) {
+      return "forEachInteger";
+    } else if (elementType.equals(Double.class)) {
+      return "forEachNumber"; // JSONArrayHandle uses forEachNumber for Double
+    } // No forEachBoolean exists in the test JSONArrayHandle
+    return null; // No specific method for this type
   }
 
   // --- Deprecated FieldParser methods ---

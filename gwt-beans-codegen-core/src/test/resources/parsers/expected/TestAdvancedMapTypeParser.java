@@ -22,24 +22,24 @@ public class TestAdvancedMapTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestAdvancedMapType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static TestAdvancedMapType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final TestAdvancedMapType config = new TestAdvancedMapType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final TestAdvancedMapType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestAdvancedMapType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse doubleListMap
-    if (obj.has("doubleListMap") && !obj.isNull("doubleListMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("doubleListMap");
+    if (baseObj.has("doubleListMap") && !baseObj.isNull("doubleListMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("doubleListMap");
       final Map<String, List<Double>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getNumberArray(key));
@@ -48,8 +48,8 @@ public class TestAdvancedMapTypeParser {
     }
 
     // Parse stringListMap
-    if (obj.has("stringListMap") && !obj.isNull("stringListMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("stringListMap");
+    if (baseObj.has("stringListMap") && !baseObj.isNull("stringListMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("stringListMap");
       final Map<String, List<String>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getStringArray(key));
@@ -58,8 +58,8 @@ public class TestAdvancedMapTypeParser {
     }
 
     // Parse objectListMap
-    if (obj.has("objectListMap") && !obj.isNull("objectListMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("objectListMap");
+    if (baseObj.has("objectListMap") && !baseObj.isNull("objectListMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("objectListMap");
       final Map<String, List<TestSimpleTypesType>> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final List<TestSimpleTypesType> list = new ArrayList<>();
@@ -75,8 +75,8 @@ public class TestAdvancedMapTypeParser {
     // Skipping field with complex generic type: interfaceMap
 
     // Parse complexKeyMap
-    if (obj.has("complexKeyMap") && !obj.isNull("complexKeyMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("complexKeyMap");
+    if (baseObj.has("complexKeyMap") && !baseObj.isNull("complexKeyMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("complexKeyMap");
       final Map<TestComplexKeyType, Double> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(TestComplexKeyType.fromStringValue(key), mapObj.getNumber(key));
@@ -91,8 +91,8 @@ public class TestAdvancedMapTypeParser {
     // Skipping field with complex generic type: wildcardKeyMap
 
     // Parse sanity
-    if (obj.has("sanity") && !obj.isNull("sanity")) {
-      final String value = obj.getString("sanity");
+    if (baseObj.has("sanity") && !baseObj.isNull("sanity")) {
+      final String value = baseObj.getString("sanity");
       config.setSanity(value);
     }
 

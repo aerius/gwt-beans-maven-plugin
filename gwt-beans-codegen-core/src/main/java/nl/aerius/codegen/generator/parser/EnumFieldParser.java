@@ -3,7 +3,6 @@ package nl.aerius.codegen.generator.parser;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 
-import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 
 /**
@@ -63,23 +62,23 @@ public class EnumFieldParser implements TypeParser {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("EnumFieldParser cannot handle type: " + type.getTypeName());
     }
-    Class<?> enumClass = (Class<?>) type;
-    String resultVarName = "level" + level + "Value";
-    String tempStringVar = "level" + level + "Str";
+    Class<?> enumType = (Class<?>) type;
+    // Use helper for variable names
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Value");
+    String strVarName = ParserCommonUtils.getVariableNameForLevel(level, "Str");
 
-    final ClassName enumType = ClassName.get(enumClass);
-
-    code.addStatement("final $T $L = $L", String.class, tempStringVar, accessExpression);
-
-    code.addStatement("final $T $L = null", enumType, resultVarName);
-
-    code.beginControlFlow("if ($L != null)", tempStringVar);
-    code.beginControlFlow("try");
-    code.addStatement("$L = $T.valueOf($L)", resultVarName, enumType, tempStringVar);
-    code.nextControlFlow("catch ($T e)", IllegalArgumentException.class);
-    code.addStatement("// Invalid enum value $S, leaving $L as null", "[" + tempStringVar + "]", resultVarName);
-    code.endControlFlow();
-    code.endControlFlow();
+    // Get the string value from JSON
+    code.addStatement("final String $L = $L", strVarName, accessExpression);
+    // Declare the result variable (nullable)
+    code.addStatement("$T $L = null", enumType, resultVarName);
+    // Try-catch block for valueOf
+    code.beginControlFlow("if ($L != null)", strVarName)
+        .beginControlFlow("try")
+        .addStatement("$L = $T.valueOf($L)", resultVarName, enumType, strVarName)
+        .nextControlFlow("catch (IllegalArgumentException e)")
+        .addStatement("// Invalid enum value \"[$L]\", leaving $L as null;", strVarName, resultVarName)
+        .endControlFlow()
+        .endControlFlow();
 
     return resultVarName;
   }

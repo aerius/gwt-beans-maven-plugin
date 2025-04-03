@@ -12,24 +12,24 @@ public class BaseTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
   
-  public static BaseType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static BaseType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final BaseType config = new BaseType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
   
-  public static void parse(final JSONObjectHandle obj, final BaseType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final BaseType config) {
+    if (baseObj == null) {
       return;
     }
     
     // Parse deepest
-    if (obj.has("deepest") && !obj.isNull("deepest")) {
-      final String value = obj.getString("deepest");
+    if (baseObj.has("deepest") && !baseObj.isNull("deepest")) {
+      final String value = baseObj.getString("deepest");
       config.setDeepest(value);
     }
   }

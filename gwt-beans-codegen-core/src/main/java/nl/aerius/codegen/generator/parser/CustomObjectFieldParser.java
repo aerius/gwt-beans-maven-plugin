@@ -89,16 +89,14 @@ public class CustomObjectFieldParser implements TypeParser {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("CustomObjectFieldParser cannot handle type: " + type.getTypeName());
     }
-    String resultVarName = "level" + level + "Value"; // Consistent naming
+    Class<?> targetClass = (Class<?>) type;
+    String parserSimpleName = targetClass.getSimpleName() + "Parser";
+    String customParserFQN = customParserImports.get(parserSimpleName);
+    ClassName parserClassName = ClassName.get(customParserFQN.substring(0, customParserFQN.lastIndexOf('.')), parserSimpleName);
+    // Use helper for variable name
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Value");
 
-    // Determine the correct parser class (could be generated or custom)
-    // Pass the full Type to determineParserClassName
-    ClassName parserClassName = ParserWriterUtils.determineParserClassName(type, parserPackage);
-
-    // Generate the statement to declare the final variable and assign the result
-    // of calling the specific object parser's parse method.
-    // Assumes the accessExpression yields a JSONObjectHandle suitable for the target parser.
-    code.addStatement("final $T $L = $T.parse($L)", type, resultVarName, parserClassName, accessExpression);
+    code.addStatement("final $T $L = $T.parse($L)", targetClass, resultVarName, parserClassName, accessExpression);
 
     return resultVarName;
   }

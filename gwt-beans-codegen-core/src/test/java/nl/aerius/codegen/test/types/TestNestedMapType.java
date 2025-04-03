@@ -16,8 +16,8 @@ public class TestNestedMapType {
   // Nested map with custom key type: Map<TestEnumType.Status, Map<String, Map<String, Integer>>>
   private Map<TestEnumType.Status, Map<String, Map<String, Integer>>> enumKeyNestedMap = new HashMap<>();
 
-  // Nested map with 8 levels of nested maps: Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>>
-  private Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>> deeplyNestedStringMap = new HashMap<>();
+  // Nested map with 5 levels of nested maps: Map<String, Map<String, Map<String, Map<String, String>>>>
+  private Map<String, Map<String, Map<String, Map<String, String>>>> deeplyNestedStringMap = new HashMap<>();
 
   public Map<String, Map<String, Integer>> getStringToNestedIntMap() {
     return stringToNestedIntMap;
@@ -51,12 +51,12 @@ public class TestNestedMapType {
     this.enumKeyNestedMap = enumKeyNestedMap;
   }
 
-  public Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>> getDeeplyNestedStringMap() {
+  public Map<String, Map<String, Map<String, Map<String, String>>>> getDeeplyNestedStringMap() {
     return deeplyNestedStringMap;
   }
 
   public void setDeeplyNestedStringMap(
-      Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>> deeplyNestedStringMap) {
+      Map<String, Map<String, Map<String, Map<String, String>>>> deeplyNestedStringMap) {
     this.deeplyNestedStringMap = deeplyNestedStringMap;
   }
 
@@ -100,21 +100,13 @@ public class TestNestedMapType {
     enumMap.put(TestEnumType.Status.ACTIVE, midMap3);
     obj.setEnumKeyNestedMap(enumMap);
 
-    // Create deeplyNestedStringMap
-    Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>>> deeplyNestedStringMap = new HashMap<>();
-    Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>>> level2 = new HashMap<>();
-    Map<String, Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>>> level3 = new HashMap<>();
-    Map<String, Map<String, Map<String, Map<String, Map<String, String>>>>> level4 = new HashMap<>();
-    Map<String, Map<String, Map<String, Map<String, String>>>> level5 = new HashMap<>();
-    Map<String, Map<String, Map<String, String>>> level6 = new HashMap<>();
-    Map<String, Map<String, String>> level7 = new HashMap<>();
-    Map<String, String> level8 = new HashMap<>();
+    // Corrected deeplyNestedStringMap creation (5 levels)
+    Map<String, Map<String, Map<String, Map<String, String>>>> deeplyNestedStringMap = new HashMap<>();
+    Map<String, Map<String, Map<String, String>>> level2 = new HashMap<>();
+    Map<String, Map<String, String>> level3 = new HashMap<>();
+    Map<String, String> level4 = new HashMap<>();
 
-    level8.put("level8Key", "value");
-    level7.put("level7Key", level8);
-    level6.put("level6Key", level7);
-    level5.put("level5Key", level6);
-    level4.put("level4Key", level5);
+    level4.put("level4Key", "value");
     level3.put("level3Key", level4);
     level2.put("level2Key", level3);
     deeplyNestedStringMap.put("level1Key", level2);

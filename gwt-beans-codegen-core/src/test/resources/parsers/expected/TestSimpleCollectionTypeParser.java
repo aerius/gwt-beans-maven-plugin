@@ -23,34 +23,34 @@ public class TestSimpleCollectionTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestSimpleCollectionType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static TestSimpleCollectionType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final TestSimpleCollectionType config = new TestSimpleCollectionType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final TestSimpleCollectionType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestSimpleCollectionType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse sanity
-    if (obj.has("sanity") && !obj.isNull("sanity")) {
-      config.setSanity(obj.getString("sanity"));
+    if (baseObj.has("sanity") && !baseObj.isNull("sanity")) {
+      config.setSanity(baseObj.getString("sanity"));
     }
 
     // Parse tags
-    if (obj.has("tags") && !obj.isNull("tags")) {
-      config.setTags(new ArrayList<>(obj.getStringArray("tags")));
+    if (baseObj.has("tags") && !baseObj.isNull("tags")) {
+      config.setTags(new ArrayList<>(baseObj.getStringArray("tags")));
     }
 
     // Parse metadata
-    if (obj.has("metadata") && !obj.isNull("metadata")) {
-      final JSONObjectHandle mapObj = obj.getObject("metadata");
+    if (baseObj.has("metadata") && !baseObj.isNull("metadata")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("metadata");
       final Map<String, String> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getString(key));
@@ -59,13 +59,13 @@ public class TestSimpleCollectionTypeParser {
     }
 
     // Parse explicitArrayList
-    if (obj.has("explicitArrayList") && !obj.isNull("explicitArrayList")) {
-      config.setExplicitArrayList(new ArrayList<>(obj.getStringArray("explicitArrayList")));
+    if (baseObj.has("explicitArrayList") && !baseObj.isNull("explicitArrayList")) {
+      config.setExplicitArrayList(new ArrayList<>(baseObj.getStringArray("explicitArrayList")));
     }
 
     // Parse explicitHashMap
-    if (obj.has("explicitHashMap") && !obj.isNull("explicitHashMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("explicitHashMap");
+    if (baseObj.has("explicitHashMap") && !baseObj.isNull("explicitHashMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("explicitHashMap");
       final HashMap<String, Integer> map = new HashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getInteger(key));
@@ -74,8 +74,8 @@ public class TestSimpleCollectionTypeParser {
     }
 
     // Parse explicitLinkedHashMap
-    if (obj.has("explicitLinkedHashMap") && !obj.isNull("explicitLinkedHashMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("explicitLinkedHashMap");
+    if (baseObj.has("explicitLinkedHashMap") && !baseObj.isNull("explicitLinkedHashMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("explicitLinkedHashMap");
       final LinkedHashMap<String, Double> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getNumber(key));
@@ -84,19 +84,19 @@ public class TestSimpleCollectionTypeParser {
     }
 
     // Parse defaultHashSet
-    if (obj.has("defaultHashSet") && !obj.isNull("defaultHashSet")) {
-      final JSONArrayHandle level1Array = obj.getArray("defaultHashSet");
-      final Set<Integer> level1Set = new HashSet<>();
-      level1Array.forEachInteger(level1Set::add);
-      config.setDefaultHashSet(level1Set);
+    if (baseObj.has("defaultHashSet") && !baseObj.isNull("defaultHashSet")) {
+      final JSONArrayHandle array = baseObj.getArray("defaultHashSet");
+      final Set<Integer> set = new HashSet<>();
+      array.forEachInteger(set::add);
+      config.setDefaultHashSet(set);
     }
 
     // Parse explicitHashSet
-    if (obj.has("explicitHashSet") && !obj.isNull("explicitHashSet")) {
-      final JSONArrayHandle level1Array = obj.getArray("explicitHashSet");
-      final HashSet<String> level1Set = new HashSet<>();
-      level1Array.forEachString(level1Set::add);
-      config.setExplicitHashSet(level1Set);
+    if (baseObj.has("explicitHashSet") && !baseObj.isNull("explicitHashSet")) {
+      final JSONArrayHandle array = baseObj.getArray("explicitHashSet");
+      final HashSet<String> set = new HashSet<>();
+      array.forEachString(set::add);
+      config.setExplicitHashSet(set);
     }
 
   }

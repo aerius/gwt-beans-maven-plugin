@@ -158,7 +158,7 @@ public class SimpleFieldParser implements TypeParser {
     }
     Class<?> clazz = (Class<?>) type;
     String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
-    String tempStringVar = ParserCommonUtils.getVariableNameForLevel(level, "str"); // For char handling
+    String tempStringVar = ParserCommonUtils.getVariableNameForLevel(level, "str");
 
     if (clazz.equals(char.class) || clazz.equals(Character.class)) {
       // Special handling for char/Character

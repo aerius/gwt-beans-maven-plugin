@@ -24,6 +24,9 @@ public final class ParserCommonUtils {
   // Java standard types
   public static final ClassName STRING = ClassName.get(String.class);
 
+  // Parameter name constants
+  public static final String BASE_OBJECT_PARAM_NAME = "baseObj";
+
   private ParserCommonUtils() {
     // Utility class, no instantiation
   }
@@ -115,15 +118,15 @@ public final class ParserCommonUtils {
       throw new IllegalArgumentException("Level cannot be less than 1");
     }
     if (level == 1) {
-      // For level 1 (top-level or first nesting), use simple names
-      // We need to ensure baseSuffix is appropriately lowerCamelCase if needed.
-      // Let's assume the caller provides the correct case for level 1.
-      // e.g., getVariableNameForLevel(1, "value") -> "value"
-      // e.g., getVariableNameForLevel(1, "map") -> "map"
-      // e.g., getVariableNameForLevel(1, "mapObj") -> "mapObj"
-      return baseSuffix;
+      // For level 1, use simple lowerCamelCase names directly from suffix
+      if (baseSuffix == null || baseSuffix.isEmpty()) {
+        return "value"; // Default if suffix is empty?
+      }
+      // Ensure the first letter is lowercase
+      String firstChar = baseSuffix.substring(0, 1).toLowerCase();
+      return firstChar + baseSuffix.substring(1);
     } else {
-      // For deeper levels, prepend "levelN"
+      // For deeper levels, prepend "levelN" and keep suffix casing
       return "level" + level + baseSuffix;
     }
   }

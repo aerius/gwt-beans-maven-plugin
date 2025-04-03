@@ -20,24 +20,24 @@ public class TestComplexCollectionTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestComplexCollectionType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static TestComplexCollectionType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final TestComplexCollectionType config = new TestComplexCollectionType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final TestComplexCollectionType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestComplexCollectionType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse objectMap
-    if (obj.has("objectMap") && !obj.isNull("objectMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("objectMap");
+    if (baseObj.has("objectMap") && !baseObj.isNull("objectMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("objectMap");
       final Map<String, TestSimpleTypesType> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final JSONObjectHandle valueObj = mapObj.getObject(key);
@@ -47,13 +47,13 @@ public class TestComplexCollectionTypeParser {
     }
 
     // Parse sanity
-    if (obj.has("sanity")) {
-      config.setSanity(obj.getString("sanity"));
+    if (baseObj.has("sanity")) {
+      config.setSanity(baseObj.getString("sanity"));
     }
 
     // Parse integerMap
-    if (obj.has("integerMap") && !obj.isNull("integerMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("integerMap");
+    if (baseObj.has("integerMap") && !baseObj.isNull("integerMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("integerMap");
       final Map<String, Integer> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getInteger(key));
@@ -62,8 +62,8 @@ public class TestComplexCollectionTypeParser {
     }
 
     // Parse doubleMap
-    if (obj.has("doubleMap") && !obj.isNull("doubleMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("doubleMap");
+    if (baseObj.has("doubleMap") && !baseObj.isNull("doubleMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("doubleMap");
       final Map<String, Double> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         map.put(key, mapObj.getNumber(key));
@@ -72,8 +72,8 @@ public class TestComplexCollectionTypeParser {
     }
 
     // Parse enumKeyStringMap
-    if (obj.has("enumKeyStringMap") && !obj.isNull("enumKeyStringMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("enumKeyStringMap");
+    if (baseObj.has("enumKeyStringMap") && !baseObj.isNull("enumKeyStringMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("enumKeyStringMap");
       final Map<TestEnumType.Status, String> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final TestEnumType.Status enumKey = TestEnumType.Status.valueOf(key);
@@ -83,8 +83,8 @@ public class TestComplexCollectionTypeParser {
     }
 
     // Parse enumKeyObjectMap
-    if (obj.has("enumKeyObjectMap") && !obj.isNull("enumKeyObjectMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("enumKeyObjectMap");
+    if (baseObj.has("enumKeyObjectMap") && !baseObj.isNull("enumKeyObjectMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("enumKeyObjectMap");
       final Map<TestEnumType.Status, TestSimpleTypesType> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final JSONObjectHandle valueObj = mapObj.getObject(key);
@@ -95,8 +95,8 @@ public class TestComplexCollectionTypeParser {
     }
 
     // Parse enumKeyIntegerMap
-    if (obj.has("enumKeyIntegerMap") && !obj.isNull("enumKeyIntegerMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("enumKeyIntegerMap");
+    if (baseObj.has("enumKeyIntegerMap") && !baseObj.isNull("enumKeyIntegerMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("enumKeyIntegerMap");
       final Map<TestEnumType.Status, Integer> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final TestEnumType.Status enumKey = TestEnumType.Status.valueOf(key);
@@ -106,34 +106,33 @@ public class TestComplexCollectionTypeParser {
     }
 
     // Parse integerKeyEnumMap
-    if (obj.has("integerKeyEnumMap") && !obj.isNull("integerKeyEnumMap")) {
-      final JSONObjectHandle mapObj = obj.getObject("integerKeyEnumMap");
-      final Map<Integer, TestEnumType.Status> level1Map = new LinkedHashMap<>();
+    if (baseObj.has("integerKeyEnumMap") && !baseObj.isNull("integerKeyEnumMap")) {
+      final JSONObjectHandle mapObj = baseObj.getObject("integerKeyEnumMap");
+      final Map<Integer, TestEnumType.Status> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(level1Key -> {
-        final Integer intKey = Integer.parseInt(level1Key);
         final String level2Str = mapObj.getString(level1Key);
         TestEnumType.Status level2Value = null;
         if (level2Str != null) {
           try {
             level2Value = TestEnumType.Status.valueOf(level2Str);
           } catch (IllegalArgumentException e) {
-            System.err.println("Warning: Invalid integerKeyEnumMap value enum: " + level2Str);
+            // Invalid enum value "[level2Str]", leaving level2Value as null;
           }
         }
-        level1Map.put(intKey, level2Value);
+        map.put(Integer.parseInt(level1Key), level2Value);
       });
-      config.setIntegerKeyEnumMap(level1Map);
+      config.setIntegerKeyEnumMap(map);
     }
 
     // Parse integerKeyObjectMap
-    if (obj.has("integerKeyObjectMap") && !obj.isNull("integerKeyObjectMap")) {
-      final JSONObjectHandle level1Obj = obj.getObject("integerKeyObjectMap");
-      final Map<Integer, TestSimpleTypesType> level1Map = new LinkedHashMap<>();
+    if (baseObj.has("integerKeyObjectMap") && !baseObj.isNull("integerKeyObjectMap")) {
+      final JSONObjectHandle level1Obj = baseObj.getObject("integerKeyObjectMap");
+      final Map<Integer, TestSimpleTypesType> map = new LinkedHashMap<>();
       level1Obj.keySet().forEach(level1Key -> {
         final TestSimpleTypesType level2Value = TestSimpleTypesTypeParser.parse(level1Obj.getObject(level1Key));
-        level1Map.put(Integer.parseInt(level1Key), level2Value);
+        map.put(Integer.parseInt(level1Key), level2Value);
       });
-      config.setIntegerKeyObjectMap(level1Map);
+      config.setIntegerKeyObjectMap(map);
     }
 
   }

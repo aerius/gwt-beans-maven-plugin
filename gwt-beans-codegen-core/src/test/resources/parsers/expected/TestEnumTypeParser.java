@@ -15,24 +15,24 @@ public class TestEnumTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestEnumType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static TestEnumType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     final TestEnumType config = new TestEnumType();
-    parse(obj, config);
+    parse(baseObj, config);
     return config;
   }
 
-  public static void parse(final JSONObjectHandle obj, final TestEnumType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestEnumType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse status
-    if (obj.has("status") && !obj.isNull("status")) {
-      final String statusStr = obj.getString("status");
+    if (baseObj.has("status") && !baseObj.isNull("status")) {
+      final String statusStr = baseObj.getString("status");
       if (statusStr != null) {
         try {
           config.setStatus(TestEnumType.Status.valueOf(statusStr));
@@ -43,8 +43,8 @@ public class TestEnumTypeParser {
     }
 
     // Parse priority
-    if (obj.has("priority") && !obj.isNull("priority")) {
-      final String priorityStr = obj.getString("priority");
+    if (baseObj.has("priority") && !baseObj.isNull("priority")) {
+      final String priorityStr = baseObj.getString("priority");
       if (priorityStr != null) {
         try {
           config.setPriority(TestEnumType.Priority.valueOf(priorityStr));
@@ -55,18 +55,17 @@ public class TestEnumTypeParser {
     }
 
     // Parse nullableStatus
-    if (obj.has("nullableStatus") && !obj.isNull("nullableStatus")) {
-      final String level1Str = obj.getString("nullableStatus");
-      TestEnumType.Status level1Value = null;
-      if (level1Str != null) {
+    if (baseObj.has("nullableStatus") && !baseObj.isNull("nullableStatus")) {
+      final String str = baseObj.getString("nullableStatus");
+      TestEnumType.Status value = null;
+      if (str != null) {
         try {
-          level1Value = TestEnumType.Status.valueOf(level1Str);
+          value = TestEnumType.Status.valueOf(str);
         } catch (IllegalArgumentException e) {
-          // Match generated comment
-          // Invalid enum value "[level1Str]", leaving level1Value as null;
+          // Invalid enum value "[str]", leaving value as null;
         }
       }
-      config.setNullableStatus(level1Value);
+      config.setNullableStatus(value);
     }
   }
 }

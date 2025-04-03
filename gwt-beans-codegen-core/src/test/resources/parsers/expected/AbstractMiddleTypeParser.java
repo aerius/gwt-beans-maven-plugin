@@ -12,25 +12,25 @@ public class AbstractMiddleTypeParser {
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static AbstractMiddleType parse(final JSONObjectHandle obj) {
-    if (obj == null) {
+  public static AbstractMiddleType parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
 
     throw new UnsupportedOperationException("Cannot create an instance of an abstract class");
   }
 
-  public static void parse(final JSONObjectHandle obj, final AbstractMiddleType config) {
-    if (obj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final AbstractMiddleType config) {
+    if (baseObj == null) {
       return;
     }
 
     // Parse fields from parent class (BaseType)
-    BaseTypeParser.parse(obj, config);
+    BaseTypeParser.parse(baseObj, config);
 
     // Parse middle
-    if (obj.has("middle") && !obj.isNull("middle")) {
-      final String value = obj.getString("middle");
+    if (baseObj.has("middle") && !baseObj.isNull("middle")) {
+      final String value = baseObj.getString("middle");
       config.setMiddle(value);
     }
   }
