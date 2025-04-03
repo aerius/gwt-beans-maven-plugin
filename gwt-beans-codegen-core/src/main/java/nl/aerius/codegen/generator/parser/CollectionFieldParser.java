@@ -62,100 +62,88 @@ public class CollectionFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("CollectionFieldParser cannot handle type: " + type.getTypeName());
     }
 
     // Determine if it's a Collection<E> or an Object E[]
     if (type instanceof ParameterizedType && Collection.class.isAssignableFrom((Class<?>) ((ParameterizedType) type).getRawType())) {
-      return generateCollectionParsingCodeInto(code, (ParameterizedType) type, objVarName, parserPackage, accessExpression, level);
+      return generateCollectionParsingCodeInto(code, (ParameterizedType) type, objVarName, parserPackage, accessExpression, level, fieldType);
     } else if (type instanceof Class<?> && ((Class<?>) type).isArray()) {
-      return generateObjectArrayParsingCodeInto(code, (Class<?>) type, objVarName, parserPackage, accessExpression, level);
+      return generateObjectArrayParsingCodeInto(code, (Class<?>) type, objVarName, parserPackage, accessExpression, level, fieldType);
     } else if (type instanceof java.lang.reflect.GenericArrayType) {
-      // Handle T[] - Get the component type and treat as object array
-      Type componentType = ((java.lang.reflect.GenericArrayType) type).getGenericComponentType();
-      // Need the runtime class for array creation, which is tricky with pure generics.
-      // For now, attempt to generate assuming componentType resolves to a usable Class<?> at runtime.
-      // This might require adjustments based on actual generic usage.
-      // Let's try generating code similar to Object array, but using the Type for parsing.
-      return generateGenericArrayParsingCodeInto(code, (java.lang.reflect.GenericArrayType) type, objVarName, parserPackage, accessExpression, level);
+      return generateGenericArrayParsingCodeInto(code, (java.lang.reflect.GenericArrayType) type, objVarName, parserPackage, accessExpression, level,
+          fieldType);
     } else {
       throw new IllegalArgumentException("Unhandled type in CollectionFieldParser: " + type.getTypeName());
     }
   }
 
   // Handles Collection<E>
-  private String generateCollectionParsingCodeInto(CodeBlock.Builder code, ParameterizedType collectionType, String objVarName, String parserPackage,
-      CodeBlock accessExpression, int level) {
-    Type elementType = collectionType.getActualTypeArguments()[0];
-    Type rawCollectionType = collectionType.getRawType();
-    // Use helper for resultVarName prefix
-    String resultVarPrefix = Set.class.isAssignableFrom((Class<?>) rawCollectionType) ? "Set" : "List";
-    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, resultVarPrefix);
+  private String generateCollectionParsingCodeInto(CodeBlock.Builder code, ParameterizedType collectionRuntimeType, String objVarName,
+      String parserPackage,
+      CodeBlock accessExpression, int level, Type fieldType) {
+    Type elementType = collectionRuntimeType.getActualTypeArguments()[0];
+    // Use fieldType to determine the variable declaration type
+    Type variableDeclarationType = fieldType;
+    String resultVarName; // Determine based on variableDeclarationType
+    ClassName collectionImpl; // Determine based on variableDeclarationType
+
+    // Determine implementation and set resultVarName prefix
+    if (variableDeclarationType instanceof Class<?> && Set.class.isAssignableFrom((Class<?>) variableDeclarationType)) {
+      resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Set");
+      collectionImpl = HASH_SET;
+    } else if (variableDeclarationType instanceof ParameterizedType
+        && Set.class.isAssignableFrom((Class<?>) ((ParameterizedType) variableDeclarationType).getRawType())) {
+      resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Set");
+      collectionImpl = HASH_SET;
+    } else { // Default to List/ArrayList
+      resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "List");
+      collectionImpl = ARRAY_LIST;
+    }
 
     // Skip if element type is a wildcard or TypeVariable for now
     if (elementType instanceof java.lang.reflect.WildcardType || elementType instanceof java.lang.reflect.TypeVariable) {
-      code.addStatement("// Skipping collection with complex generic type argument: $L", collectionType.getTypeName());
-      // Declare a null variable to satisfy return value requirement
-      code.addStatement("$T $L = null", Collection.class, resultVarName);
+      code.addStatement("// Skipping collection with complex generic type argument: $L", collectionRuntimeType.getTypeName());
+      code.addStatement("$T $L = null", variableDeclarationType, resultVarName); // Declare null var with interface type
       return resultVarName;
     }
 
-    // Determine the appropriate collection implementation
-    ClassName collectionImpl;
-    Type collectionInterface;
-    if (Set.class.isAssignableFrom((Class<?>) rawCollectionType)) {
-      collectionImpl = HASH_SET;
-      collectionInterface = Set.class;
-    } else { // Default to List/ArrayList
-      collectionImpl = ARRAY_LIST;
-      collectionInterface = java.util.List.class;
-    }
-
-    // Use helper for other variables
     String arrayVar = ParserCommonUtils.getVariableNameForLevel(level, "Array");
     String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
 
-    // 1. Get the JSON Array
+    // 1. Get JSON Array
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayVar, accessExpression);
-    // 2. Create the Collection instance
-    code.addStatement("final $T<$T> $L = new $T<>()", collectionInterface, elementType, resultVarName, collectionImpl);
+    // 2. Declare using the exact fieldType, instantiate using IMPL
+    code.addStatement("final $T $L = new $T<>()", fieldType, resultVarName, collectionImpl);
 
-    // Check if a specific forEach exists for the element type
     String specificForEach = getSpecificForEachMethod(elementType);
 
     if (specificForEach != null) {
-      // 3a. Use specific forEachXxx method directly
       code.addStatement("$L.$L($L::add)", arrayVar, specificForEach, resultVarName);
     } else {
-      // 3b. Use generic forEach loop for complex types or types without specific method (e.g., Boolean)
       code.add("$L.forEach($L -> {\n", arrayVar, itemVar)
           .indent();
-
-        // 4. Dispatch parsing for the element type
-        String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
-                code,
-            elementType,
-            null,
-            parserPackage,
-            CodeBlock.of("$L", itemVar), // Access the element via the loop variable
-            level + 1);
-
-        // 5. Add the parsed element to the collection
-        code.addStatement("$L.add($L)", resultVarName, elementVarName);
-
-        // 6. End loop
-        code.unindent()
-            .addStatement("})");
-      }
-
+      // Call dispatch with 7 parameters
+      Type elementFieldType = getElementTypeFromCollectionType(fieldType);
+      String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
+          code, elementType, null, parserPackage, CodeBlock.of("$L", itemVar), level + 1, elementFieldType);
+      code.addStatement("$L.add($L)", resultVarName, elementVarName);
+      code.unindent().addStatement("})");
+    }
     return resultVarName;
   }
 
   // Handles Object E[] (e.g., String[], CustomObject[])
-  private String generateObjectArrayParsingCodeInto(CodeBlock.Builder code, Class<?> arrayClass, String objVarName, String parserPackage,
-      CodeBlock accessExpression, int level) {
-    Class<?> componentType = arrayClass.getComponentType();
+  private String generateObjectArrayParsingCodeInto(CodeBlock.Builder code, Class<?> arrayRuntimeType, String objVarName, String parserPackage,
+      CodeBlock accessExpression, int level, Type fieldType) {
+    Type componentType = arrayRuntimeType.getComponentType();
     // Use helper for variable names
     String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
     String arrayJsonVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
@@ -167,19 +155,21 @@ public class CollectionFieldParser implements TypeParser {
     // 2. Create the Java Array instance
     // Use length() method of JSONArrayHandle
     code.addStatement("final $T[] $L = new $T[$L.length()]",
-            componentType, resultVarName, componentType, arrayJsonVar);
+        fieldType, resultVarName, componentType, arrayJsonVar);
     // 3. Loop over the JSON Array using forEachWithIndex
     code.add("$L.forEachWithIndex(($L, $L) -> {\n", arrayJsonVar, itemVar, indexVar)
         .indent();
 
     // 4. Dispatch parsing for the component type
+    Type componentFieldType = getComponentTypeFromArrayType(fieldType);
     String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
         code,
         componentType,
         null,
         parserPackage,
         CodeBlock.of("$L", itemVar),
-        level + 1);
+        level + 1,
+        componentFieldType);
 
     // 5. Assign the parsed element to the array index
     code.addStatement("$L[$L] = $L", resultVarName, indexVar, elementVarName);
@@ -192,9 +182,9 @@ public class CollectionFieldParser implements TypeParser {
   }
 
   // Handles GenericArrayType (e.g., T[]) - Experimental
-  private String generateGenericArrayParsingCodeInto(CodeBlock.Builder code, java.lang.reflect.GenericArrayType arrayType, String objVarName,
-      String parserPackage, CodeBlock accessExpression, int level) {
-    Type componentType = arrayType.getGenericComponentType();
+  private String generateGenericArrayParsingCodeInto(CodeBlock.Builder code, java.lang.reflect.GenericArrayType arrayRuntimeType, String objVarName,
+      String parserPackage, CodeBlock accessExpression, int level, Type fieldType) {
+    Type componentType = arrayRuntimeType.getGenericComponentType();
     // Use helper for variable names
     String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
     String arrayJsonVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
@@ -211,13 +201,15 @@ public class CollectionFieldParser implements TypeParser {
     // 3. Loop over JSON Array, parse elements into List (use generic forEach)
     code.add("$L.forEach($L -> {\n", arrayJsonVar, itemVar)
         .indent();
+    Type componentFieldType = getComponentTypeFromArrayType(fieldType);
     String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
         code,
         componentType,
         null,
         parserPackage,
         CodeBlock.of("$L", itemVar),
-        level + 1);
+        level + 1,
+        componentFieldType);
     code.addStatement("$L.add($L)", tempListVar, elementVarName);
     code.unindent()
         .addStatement("})");
@@ -279,5 +271,22 @@ public class CollectionFieldParser implements TypeParser {
       innerCode.addStatement("// Assign result using deprecated method: config.set$L($L);", ParserCommonUtils.capitalize(fieldName), resultVar);
     }));
     return code.build();
+  }
+
+  private Type getElementTypeFromCollectionType(Type collectionType) {
+    if (collectionType instanceof ParameterizedType) {
+      ParameterizedType paramType = (ParameterizedType) collectionType;
+      if (Collection.class.isAssignableFrom((Class<?>) paramType.getRawType())) {
+        return paramType.getActualTypeArguments()[0];
+      }
+    }
+    throw new IllegalArgumentException("Cannot determine element type from collection type: " + collectionType.getTypeName());
+  }
+
+  private Type getComponentTypeFromArrayType(Type arrayType) {
+    if (arrayType instanceof java.lang.reflect.GenericArrayType) {
+      return ((java.lang.reflect.GenericArrayType) arrayType).getGenericComponentType();
+    }
+    throw new IllegalArgumentException("Cannot determine component type from array type: " + arrayType.getTypeName());
   }
 }

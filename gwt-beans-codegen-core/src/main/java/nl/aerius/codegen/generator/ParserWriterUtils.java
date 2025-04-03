@@ -314,7 +314,8 @@ public final class ParserWriterUtils {
                   ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
                   parserPackage,
                   fieldAccess, // Pass the code to access the field's data
-                  1 // Start top-level fields at level 1
+                  1, // Start top-level fields at level 1 - Remove last arg
+                  field.getGenericType() // Pass fieldType
               );
               innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
             }));
@@ -335,15 +336,16 @@ public final class ParserWriterUtils {
    *                         for this type from the objVarName (e.g., "keyVar", "indexVar", or for top-level fields,
    *                         an expression like obj.getObject("fieldName")).
    * @param level            The current nesting level (for variable scoping).
+   * @param fieldType        The exact generic type of the field/setter parameter.
    * @return The name of the variable declared within the generated code block
    *         that holds the final parsed value.
    */
   public static String dispatchGenerateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage,
-      CodeBlock accessExpression, int level) {
+      CodeBlock accessExpression, int level, Type fieldType) {
     for (TypeParser parser : PARSERS) {
       if (parser.canHandle(type)) {
-        // Found a handler, delegate to its generateParsingCodeInto method
-        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level);
+        // Call 7-parameter version
+        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType);
       }
     }
 

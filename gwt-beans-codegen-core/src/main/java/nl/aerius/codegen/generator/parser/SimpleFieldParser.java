@@ -153,6 +153,12 @@ public class SimpleFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("SimpleFieldParser cannot handle type: " + type.getTypeName());
     }
@@ -162,15 +168,13 @@ public class SimpleFieldParser implements TypeParser {
 
     if (clazz.equals(char.class) || clazz.equals(Character.class)) {
       // Special handling for char/Character
-      code.addStatement("final String $L = $L", tempStringVar, accessExpression); // accessExpression should yield String here
-      // Declare the final char variable, initialized carefully
+      code.addStatement("final String $L = $L", tempStringVar, accessExpression);
       if (clazz.equals(Character.class)) {
         code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : null",
             clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
       } else { // char primitive
-        // Use integer 0 as the default, as char literal rendering seems problematic
-            code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : 0",
-            clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
+        code.addStatement("final $T $L = ($L != null && !$L.isEmpty()) ? $L.charAt(0) : 0",
+                clazz, resultVarName, tempStringVar, tempStringVar, tempStringVar);
       }
     } else {
       // Handle all other simple types using the helper

@@ -117,17 +117,20 @@ public final class ParserCommonUtils {
     if (level < 1) {
       throw new IllegalArgumentException("Level cannot be less than 1");
     }
+
+    // Default suffix to "value" if null or empty, handle upfront
+    if (baseSuffix == null || baseSuffix.isEmpty()) {
+      return getVariableNameForLevel(level, "value");
+    }
+
     if (level == 1) {
-      // For level 1, use simple lowerCamelCase names directly from suffix
-      if (baseSuffix == null || baseSuffix.isEmpty()) {
-        return "value"; // Default if suffix is empty?
-      }
-      // Ensure the first letter is lowercase
+      // Level 1: Ensure the first letter is lowercase (no need for null check now)
       String firstChar = baseSuffix.substring(0, 1).toLowerCase();
       return firstChar + baseSuffix.substring(1);
     } else {
-      // For deeper levels, prepend "levelN" and keep suffix casing
-      return "level" + level + baseSuffix;
+      // Level > 1: Prepend "levelN" and Capitalize the suffix (no need for null check now)
+      String capitalizedSuffix = Character.toUpperCase(baseSuffix.charAt(0)) + baseSuffix.substring(1);
+      return "level" + level + capitalizedSuffix;
     }
   }
 

@@ -72,12 +72,18 @@ public class MapFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("MapFieldParser cannot handle type: " + type.getTypeName());
     }
-    ParameterizedType mapType = (ParameterizedType) type;
-    Type keyType = mapType.getActualTypeArguments()[0];
-    Type valueType = mapType.getActualTypeArguments()[1];
+    ParameterizedType mapRuntimeType = (ParameterizedType) type;
+    Type keyType = mapRuntimeType.getActualTypeArguments()[0];
+    Type valueType = mapRuntimeType.getActualTypeArguments()[1];
     ClassName mapImpl = ClassName.get(java.util.LinkedHashMap.class);
 
     String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
@@ -86,7 +92,7 @@ public class MapFieldParser implements TypeParser {
 
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONObjectHandle(), objVar, accessExpression);
 
-    code.addStatement("final $T<$T, $T> $L = new $T<>()", Map.class, keyType, valueType, mapVar, mapImpl);
+    code.addStatement("final $T $L = new $T<>()", fieldType, mapVar, mapImpl);
 
     code.add("$L.keySet().forEach($L -> {\n", objVar, keyVar)
         .indent();
@@ -96,13 +102,15 @@ public class MapFieldParser implements TypeParser {
         objVar,
         CodeBlock.of("$L", keyVar));
 
+    Type valueFieldType = getValueTypeFromMapType(fieldType);
     String valueVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
         code,
         valueType,
         objVar,
-            parserPackage,
+        parserPackage,
         valueAccessExpression,
-        level + 1);
+        level + 1,
+        valueFieldType);
 
     addPutStatement(code, mapVar, keyType, keyVar, valueVarName);
 
@@ -121,5 +129,19 @@ public class MapFieldParser implements TypeParser {
     }
 
     code.addStatement("$L.put($L, $L)", mapVar, keyExpression, valueVar);
+  }
+
+  private Type getValueTypeFromMapType(Type mapFieldType) {
+    if (mapFieldType instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) mapFieldType;
+      if (Map.class.isAssignableFrom((Class<?>) pt.getRawType())) {
+        Type[] typeArgs = pt.getActualTypeArguments();
+        if (typeArgs.length == 2) {
+          return typeArgs[1];
+        }
+      }
+    }
+    System.err.println("Warning: Could not extract value type from map type: " + mapFieldType.getTypeName());
+    return Object.class;
   }
 }

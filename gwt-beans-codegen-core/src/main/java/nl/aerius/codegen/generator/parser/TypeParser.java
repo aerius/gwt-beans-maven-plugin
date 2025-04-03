@@ -48,4 +48,22 @@ public interface TypeParser extends FieldParser {
      *         that holds the final parsed value.
      */
     String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression, int level);
+
+    /**
+     * Generates the code required to parse a value of the given type from a specific JSON access
+     * expression and adds it to the provided CodeBlock.Builder. This method declares a variable
+     * holding the parsed value.
+     *
+     * @param code              The CodeBlock.Builder to add generated code to.
+     * @param type              The runtime Type being parsed (might differ from fieldType if nested).
+     * @param objVarName        The variable name of the *parent* JSONObjectHandle containing the data.
+     * @param parserPackage     The package for generated parsers.
+     * @param accessExpression  A CodeBlock representing how to access the raw JSON data.
+     * @param level             The current nesting level.
+     * @param fieldType         The exact generic type of the original field/setter parameter.
+     * @return The name of the variable declared within the generated code block
+     *         that holds the final parsed value.
+     */
+    String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage,
+        CodeBlock accessExpression, int level, Type fieldType);
 } 

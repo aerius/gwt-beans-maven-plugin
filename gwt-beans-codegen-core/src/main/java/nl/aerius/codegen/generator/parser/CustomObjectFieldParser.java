@@ -86,17 +86,43 @@ public class CustomObjectFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("CustomObjectFieldParser cannot handle type: " + type.getTypeName());
     }
-    Class<?> targetClass = (Class<?>) type;
+
+    Class<?> targetClass;
+    if (type instanceof ParameterizedType) {
+      Type rawType = ((ParameterizedType) type).getRawType();
+      if (rawType instanceof Class<?>) {
+        targetClass = (Class<?>) rawType;
+      } else {
+        throw new IllegalArgumentException("Cannot handle non-class raw type in ParameterizedType: " + rawType.getTypeName());
+      }
+    } else if (type instanceof Class<?>) {
+      targetClass = (Class<?>) type;
+    } else {
+      throw new IllegalArgumentException("Unexpected type structure in CustomObjectFieldParser: " + type.getTypeName());
+    }
+
     String parserSimpleName = targetClass.getSimpleName() + "Parser";
     String customParserFQN = customParserImports.get(parserSimpleName);
-    ClassName parserClassName = ClassName.get(customParserFQN.substring(0, customParserFQN.lastIndexOf('.')), parserSimpleName);
-    // Use helper for variable name
-    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Value");
+    ClassName parserClassName;
 
-    code.addStatement("final $T $L = $T.parse($L)", targetClass, resultVarName, parserClassName, accessExpression);
+    if (customParserFQN != null) {
+      parserClassName = ClassName.get(customParserFQN.substring(0, customParserFQN.lastIndexOf('.')), parserSimpleName);
+    } else {
+      parserClassName = ClassName.get(parserPackage, parserSimpleName);
+    }
+
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
+
+    code.addStatement("final $T $L = $T.parse($L)", fieldType, resultVarName, parserClassName, accessExpression);
 
     return resultVarName;
   }

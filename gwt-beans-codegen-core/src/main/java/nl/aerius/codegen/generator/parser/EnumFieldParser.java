@@ -59,13 +59,18 @@ public class EnumFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("EnumFieldParser cannot handle type: " + type.getTypeName());
     }
     Class<?> enumType = (Class<?>) type;
-    // Use helper for variable names
-    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Value");
-    String strVarName = ParserCommonUtils.getVariableNameForLevel(level, "Str");
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
+    String strVarName = ParserCommonUtils.getVariableNameForLevel(level, "str");
 
     // Get the string value from JSON
     code.addStatement("final String $L = $L", strVarName, accessExpression);
@@ -76,7 +81,7 @@ public class EnumFieldParser implements TypeParser {
         .beginControlFlow("try")
         .addStatement("$L = $T.valueOf($L)", resultVarName, enumType, strVarName)
         .nextControlFlow("catch (IllegalArgumentException e)")
-        .addStatement("// Invalid enum value \"[$L]\", leaving $L as null;", strVarName, resultVarName)
+        .add("// Invalid enum value \"[$L]\", leaving $L as null", strVarName, resultVarName)
         .endControlFlow()
         .endControlFlow();
 

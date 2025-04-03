@@ -96,24 +96,27 @@ public class PrimitiveArrayFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("PrimitiveArrayFieldParser cannot handle type: " + type.getTypeName());
     }
-    Class<?> arrayClass = (Class<?>) type;
-    Class<?> componentType = arrayClass.getComponentType();
-    String resultVarName = "level" + level + "Value"; // Consistent naming
-
+    // fieldType not needed for declaration, use runtime type
+    Class<?> arrayType = (Class<?>) type;
+    Class<?> componentType = arrayType.getComponentType();
+    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
     String getterMethod = PRIMITIVE_COMPONENT_TO_GETTER.get(componentType);
+
     if (getterMethod == null) {
-      // Should not happen if canHandle is correct, but as a safeguard:
-      throw new IllegalArgumentException("PrimitiveArrayFieldParser: No direct getter found for component type: " + componentType.getName());
+      // Fallback or error for unsupported primitive array types
+      code.addStatement("$T[] $L = null; // Unsupported primitive array type", componentType, resultVarName);
+    } else {
+      code.addStatement("final $T[] $L = $L.$L($L)", componentType, resultVarName, objVarName, getterMethod, accessExpression);
     }
-
-    // Generate the statement to declare the final variable and assign the result
-    // of calling the specific primitive array getter on the accessExpression.
-    // Assumes accessExpression yields a JSONArrayHandle.
-    code.addStatement("final $T $L = $L.$L()", type, resultVarName, accessExpression, getterMethod);
-
     return resultVarName;
   }
 }
