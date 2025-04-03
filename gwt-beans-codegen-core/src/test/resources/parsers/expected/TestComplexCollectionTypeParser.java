@@ -41,7 +41,8 @@ public class TestComplexCollectionTypeParser {
       final Map<String, TestSimpleTypesType> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final JSONObjectHandle valueObj = mapObj.getObject(key);
-        map.put(key, TestSimpleTypesTypeParser.parse(valueObj));
+        final TestSimpleTypesType value = TestSimpleTypesTypeParser.parse(valueObj);
+        map.put(key, value);
       });
       config.setObjectMap(map);
     }
@@ -56,7 +57,8 @@ public class TestComplexCollectionTypeParser {
       final JSONObjectHandle mapObj = baseObj.getObject("integerMap");
       final Map<String, Integer> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getInteger(key));
+        final Integer value = mapObj.getInteger(key);
+        map.put(key, value);
       });
       config.setIntegerMap(map);
     }
@@ -66,7 +68,8 @@ public class TestComplexCollectionTypeParser {
       final JSONObjectHandle mapObj = baseObj.getObject("doubleMap");
       final Map<String, Double> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getNumber(key));
+        final Double value = mapObj.getNumber(key);
+        map.put(key, value);
       });
       config.setDoubleMap(map);
     }
@@ -77,7 +80,8 @@ public class TestComplexCollectionTypeParser {
       final Map<TestEnumType.Status, String> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final TestEnumType.Status enumKey = TestEnumType.Status.valueOf(key);
-        map.put(enumKey, mapObj.getString(key));
+        final String value = mapObj.getString(key);
+        map.put(enumKey, value);
       });
       config.setEnumKeyStringMap(map);
     }
@@ -89,7 +93,8 @@ public class TestComplexCollectionTypeParser {
       mapObj.keySet().forEach(key -> {
         final JSONObjectHandle valueObj = mapObj.getObject(key);
         final TestEnumType.Status enumKey = TestEnumType.Status.valueOf(key);
-        map.put(enumKey, TestSimpleTypesTypeParser.parse(valueObj));
+        final TestSimpleTypesType value = TestSimpleTypesTypeParser.parse(valueObj);
+        map.put(enumKey, value);
       });
       config.setEnumKeyObjectMap(map);
     }
@@ -100,7 +105,8 @@ public class TestComplexCollectionTypeParser {
       final Map<TestEnumType.Status, Integer> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
         final TestEnumType.Status enumKey = TestEnumType.Status.valueOf(key);
-        map.put(enumKey, mapObj.getInteger(key));
+        final Integer value = mapObj.getInteger(key);
+        map.put(enumKey, value);
       });
       config.setEnumKeyIntegerMap(map);
     }
@@ -116,7 +122,7 @@ public class TestComplexCollectionTypeParser {
           try {
             level2Value = TestEnumType.Status.valueOf(level2Str);
           } catch (IllegalArgumentException e) {
-            // Invalid enum value "[level2Str]", leaving level2Value as null
+            // Invalid enum value, leave as default
           }
         }
         map.put(Integer.parseInt(key), level2Value);

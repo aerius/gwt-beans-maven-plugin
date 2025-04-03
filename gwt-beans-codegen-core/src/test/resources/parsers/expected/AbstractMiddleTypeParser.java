@@ -1,8 +1,11 @@
 package nl.aerius.codegen.test.generated;
 
+import javax.annotation.processing.Generated;
+
 import nl.aerius.codegen.test.types.AbstractMiddleType;
 import nl.aerius.json.JSONObjectHandle;
 
+@Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class AbstractMiddleTypeParser {
   public static AbstractMiddleType parse(final String jsonText) {
     if (jsonText == null) {

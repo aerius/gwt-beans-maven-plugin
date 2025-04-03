@@ -62,7 +62,7 @@ public class TestEnumTypeParser {
         try {
           value = TestEnumType.Status.valueOf(str);
         } catch (IllegalArgumentException e) {
-          // Invalid enum value "[str]", leaving value as null
+          // Invalid enum value, leave as default
         }
       }
       config.setNullableStatus(value);

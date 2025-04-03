@@ -50,10 +50,11 @@ public class TestSimpleCollectionTypeParser {
 
     // Parse metadata
     if (baseObj.has("metadata") && !baseObj.isNull("metadata")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("metadata");
+      final JSONObjectHandle obj = baseObj.getObject("metadata");
       final Map<String, String> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getString(key));
+      obj.keySet().forEach(key -> {
+        final String value = obj.getString(key);
+        map.put(key, value);
       });
       config.setMetadata(map);
     }
@@ -65,20 +66,22 @@ public class TestSimpleCollectionTypeParser {
 
     // Parse explicitHashMap
     if (baseObj.has("explicitHashMap") && !baseObj.isNull("explicitHashMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("explicitHashMap");
+      final JSONObjectHandle obj = baseObj.getObject("explicitHashMap");
       final HashMap<String, Integer> map = new HashMap<>();
-      mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getInteger(key));
+      obj.keySet().forEach(key -> {
+        final Integer value = obj.getInteger(key);
+        map.put(key, value);
       });
       config.setExplicitHashMap(map);
     }
 
     // Parse explicitLinkedHashMap
     if (baseObj.has("explicitLinkedHashMap") && !baseObj.isNull("explicitLinkedHashMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("explicitLinkedHashMap");
+      final JSONObjectHandle obj = baseObj.getObject("explicitLinkedHashMap");
       final LinkedHashMap<String, Double> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getNumber(key));
+      obj.keySet().forEach(key -> {
+        final Double level2Value = obj.getNumber(key);
+        map.put(key, level2Value);
       });
       config.setExplicitLinkedHashMap(map);
     }

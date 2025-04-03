@@ -59,16 +59,16 @@ public class TestEnumListTypeParser {
 
     // Parse statusMap
     if (baseObj.has("statusMap") && !baseObj.isNull("statusMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("statusMap");
+      final JSONObjectHandle obj = baseObj.getObject("statusMap");
       final Map<String, TestEnumType.Status> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final String level2Str = mapObj.getString(key);
+      obj.keySet().forEach(key -> {
+        final String level2Str = obj.getString(key);
         TestEnumType.Status level2Value = null;
         if (level2Str != null) {
           try {
             level2Value = TestEnumType.Status.valueOf(level2Str);
           } catch (IllegalArgumentException e) {
-            // Invalid enum value "[level2Str]", leaving level2Value as null
+            // Invalid enum value, leave as default
           }
         }
         map.put(key, level2Value);

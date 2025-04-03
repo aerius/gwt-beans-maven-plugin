@@ -39,32 +39,33 @@ public class TestAdvancedMapTypeParser {
 
     // Parse doubleListMap
     if (baseObj.has("doubleListMap") && !baseObj.isNull("doubleListMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("doubleListMap");
+      final JSONObjectHandle obj = baseObj.getObject("doubleListMap");
       final Map<String, List<Double>> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getNumberArray(key));
+      obj.keySet().forEach(key -> {
+        map.put(key, obj.getNumberArray(key));
       });
       config.setDoubleListMap(map);
     }
 
     // Parse stringListMap
     if (baseObj.has("stringListMap") && !baseObj.isNull("stringListMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("stringListMap");
+      final JSONObjectHandle obj = baseObj.getObject("stringListMap");
       final Map<String, List<String>> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        map.put(key, mapObj.getStringArray(key));
+      obj.keySet().forEach(key -> {
+        map.put(key, obj.getStringArray(key));
       });
       config.setStringListMap(map);
     }
 
     // Parse objectListMap
     if (baseObj.has("objectListMap") && !baseObj.isNull("objectListMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("objectListMap");
+      final JSONObjectHandle obj = baseObj.getObject("objectListMap");
       final Map<String, List<TestSimpleTypesType>> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
+      obj.keySet().forEach(key -> {
         final List<TestSimpleTypesType> list = new ArrayList<>();
-        mapObj.getArray(key).forEach(item -> {
-          list.add(TestSimpleTypesTypeParser.parse(item));
+        obj.getArray(key).forEach(item -> {
+          final TestSimpleTypesType value = TestSimpleTypesTypeParser.parse(item);
+          list.add(value);
         });
         map.put(key, list);
       });
@@ -79,7 +80,8 @@ public class TestAdvancedMapTypeParser {
       final JSONObjectHandle mapObj = baseObj.getObject("complexKeyMap");
       final Map<TestComplexKeyType, Double> map = new LinkedHashMap<>();
       mapObj.keySet().forEach(key -> {
-        map.put(TestComplexKeyType.fromStringValue(key), mapObj.getNumber(key));
+        final Double value = mapObj.getNumber(key);
+        map.put(TestComplexKeyType.fromStringValue(key), value);
       });
       config.setComplexKeyMap(map);
     }

@@ -12,6 +12,7 @@ import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
 import nl.aerius.codegen.test.types.TestNestedMapType;
 import nl.aerius.codegen.test.types.TestRootObjectType;
+import nl.aerius.codegen.test.types.TestSimpleCollectionType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
 import nl.aerius.json.JSONObjectHandle;
 
@@ -57,7 +58,8 @@ public class TestRootObjectTypeParser {
 
     // Parse simpleCollection
     if (baseObj.has("simpleCollection") && !baseObj.isNull("simpleCollection")) {
-      config.setSimpleCollection(TestSimpleCollectionTypeParser.parse(baseObj.getObject("simpleCollection")));
+      final TestSimpleCollectionType value = TestSimpleCollectionTypeParser.parse(baseObj.getObject("simpleCollection"));
+      config.setSimpleCollection(value);
     }
 
     // Parse simpleTypes
