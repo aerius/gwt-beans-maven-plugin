@@ -1,9 +1,7 @@
 package nl.aerius.codegen.test.generated;
 
-import javax.annotation.processing.Generated;
-
 import nl.aerius.codegen.test.types.BaseType;
-import nl.aerius.wui.service.json.JSONObjectHandle;
+import nl.aerius.json.JSONObjectHandle;
 
 public class BaseTypeParser {
   public static BaseType parse(final String jsonText) {

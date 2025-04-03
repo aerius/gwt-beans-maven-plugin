@@ -2,14 +2,13 @@ package nl.aerius.codegen.test.generated;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.HashMap;
 
 import javax.annotation.processing.Generated;
 
-import nl.aerius.wui.service.json.JSONObjectHandle;
 import nl.aerius.codegen.test.types.TestComplexCollectionType;
 import nl.aerius.codegen.test.types.TestEnumType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
+import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestComplexCollectionTypeParser {

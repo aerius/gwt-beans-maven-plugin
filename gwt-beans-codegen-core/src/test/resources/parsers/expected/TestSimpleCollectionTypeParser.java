@@ -9,9 +9,9 @@ import java.util.Set;
 
 import javax.annotation.processing.Generated;
 
-import nl.aerius.wui.service.json.JSONObjectHandle;
-import nl.aerius.wui.service.json.JSONArrayHandle;
 import nl.aerius.codegen.test.types.TestSimpleCollectionType;
+import nl.aerius.json.JSONArrayHandle;
+import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestSimpleCollectionTypeParser {
@@ -87,21 +87,15 @@ public class TestSimpleCollectionTypeParser {
     if (obj.has("defaultHashSet") && !obj.isNull("defaultHashSet")) {
       final JSONArrayHandle level1Array = obj.getArray("defaultHashSet");
       final Set<Integer> level1Set = new HashSet<>();
-      level1Array.forEach(level1Item -> {
-        final Integer level2value = (Integer) level1Item;
-        level1Set.add(level2value);
-      });
+      level1Array.forEachInteger(level1Set::add);
       config.setDefaultHashSet(level1Set);
     }
 
     // Parse explicitHashSet
     if (obj.has("explicitHashSet") && !obj.isNull("explicitHashSet")) {
       final JSONArrayHandle level1Array = obj.getArray("explicitHashSet");
-      final Set<String> level1Set = new HashSet<>();
-      level1Array.forEach(level1Item -> {
-        final String level2value = level1Item;
-        level1Set.add(level2value);
-      });
+      final HashSet<String> level1Set = new HashSet<>();
+      level1Array.forEachString(level1Set::add);
       config.setExplicitHashSet(level1Set);
     }
 

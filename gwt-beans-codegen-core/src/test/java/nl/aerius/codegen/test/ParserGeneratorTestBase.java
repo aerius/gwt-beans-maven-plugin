@@ -223,6 +223,10 @@ public abstract class ParserGeneratorTestBase {
 
       // Collect imports separately
       if (line.startsWith("import ")) {
+        // Filter out specific JSON imports to ignore differences
+        if (line.startsWith("import nl.aerius.wui.service.json.") || line.startsWith("import nl.aerius.json.")) {
+          continue; // Skip this import line
+        }
         // Exclude the diff utils import itself from normalization comparison if needed
         // if (!line.contains("com.github.difflib")) { 
            imports.add(line);

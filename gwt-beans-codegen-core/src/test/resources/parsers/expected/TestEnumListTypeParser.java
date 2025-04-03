@@ -1,7 +1,5 @@
 package nl.aerius.codegen.test.generated;
 
-import javax.annotation.processing.Generated;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -9,9 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.processing.Generated;
+
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
-import nl.aerius.wui.service.json.JSONObjectHandle;
+import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestEnumListTypeParser {
