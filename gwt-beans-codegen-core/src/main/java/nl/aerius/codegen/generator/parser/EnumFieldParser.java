@@ -81,7 +81,7 @@ public class EnumFieldParser implements TypeParser {
         .beginControlFlow("try")
         .addStatement("$L = $T.valueOf($L)", resultVarName, enumType, strVarName)
         .nextControlFlow("catch (IllegalArgumentException e)")
-        .add("// Invalid enum value \"[$L]\", leaving $L as null", strVarName, resultVarName)
+        .add("// Invalid enum value, leave as default\n")
         .endControlFlow()
         .endControlFlow();
 

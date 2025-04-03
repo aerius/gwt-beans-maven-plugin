@@ -9,7 +9,6 @@ import nl.aerius.codegen.test.types.TestComplexCollectionType;
 import nl.aerius.codegen.test.types.TestEnumType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
 import nl.aerius.json.JSONObjectHandle;
-import nl.aerius.codegen.test.generated.TestSimpleTypesTypeParser;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
 public class TestComplexCollectionTypeParser {
@@ -110,28 +109,28 @@ public class TestComplexCollectionTypeParser {
     if (baseObj.has("integerKeyEnumMap") && !baseObj.isNull("integerKeyEnumMap")) {
       final JSONObjectHandle mapObj = baseObj.getObject("integerKeyEnumMap");
       final Map<Integer, TestEnumType.Status> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(level1Key -> {
-        final String level2Str = mapObj.getString(level1Key);
+      mapObj.keySet().forEach(key -> {
+        final String level2Str = mapObj.getString(key);
         TestEnumType.Status level2Value = null;
         if (level2Str != null) {
           try {
             level2Value = TestEnumType.Status.valueOf(level2Str);
           } catch (IllegalArgumentException e) {
-            // Invalid enum value "[level2Str]", leaving level2Value as null;
+            // Invalid enum value "[level2Str]", leaving level2Value as null
           }
         }
-        map.put(Integer.parseInt(level1Key), level2Value);
+        map.put(Integer.parseInt(key), level2Value);
       });
       config.setIntegerKeyEnumMap(map);
     }
 
     // Parse integerKeyObjectMap
     if (baseObj.has("integerKeyObjectMap") && !baseObj.isNull("integerKeyObjectMap")) {
-      final JSONObjectHandle level1Obj = baseObj.getObject("integerKeyObjectMap");
+      final JSONObjectHandle obj = baseObj.getObject("integerKeyObjectMap");
       final Map<Integer, TestSimpleTypesType> map = new LinkedHashMap<>();
-      level1Obj.keySet().forEach(level1Key -> {
-        final TestSimpleTypesType level2Value = TestSimpleTypesTypeParser.parse(level1Obj.getObject(level1Key));
-        map.put(Integer.parseInt(level1Key), level2Value);
+      obj.keySet().forEach(key -> {
+        final TestSimpleTypesType level2Value = TestSimpleTypesTypeParser.parse(obj.getObject(key));
+        map.put(Integer.parseInt(key), level2Value);
       });
       config.setIntegerKeyObjectMap(map);
     }
