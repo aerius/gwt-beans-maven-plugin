@@ -84,7 +84,25 @@ public class MapFieldParser implements TypeParser {
     ParameterizedType mapRuntimeType = (ParameterizedType) type;
     Type keyType = mapRuntimeType.getActualTypeArguments()[0];
     Type valueType = mapRuntimeType.getActualTypeArguments()[1];
-    ClassName mapImpl = ClassName.get(java.util.LinkedHashMap.class);
+
+    // Determine Map implementation based on fieldType
+    ClassName mapImpl;
+    Type typeForImplCheck = fieldType; // Start with the actual field type
+
+    if (fieldType instanceof ParameterizedType) {
+      // If it's ParameterizedType (like HashMap<String, Integer>), 
+      // get its raw type (HashMap.class) for the implementation check
+      typeForImplCheck = ((ParameterizedType) fieldType).getRawType();
+    }
+
+    // Now check if the type (or raw type) is a concrete Map implementation
+    if (typeForImplCheck instanceof Class<?> && !((Class<?>) typeForImplCheck).isInterface()
+        && Map.class.isAssignableFrom((Class<?>) typeForImplCheck)) {
+      mapImpl = ClassName.get((Class<?>) typeForImplCheck); // Use concrete class (e.g., HashMap)
+    } else {
+      // Default for Map interface or other cases
+      mapImpl = ClassName.get(java.util.LinkedHashMap.class);
+    }
 
     String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
     String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");

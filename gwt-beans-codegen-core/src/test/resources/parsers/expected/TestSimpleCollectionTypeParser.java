@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,12 +41,16 @@ public class TestSimpleCollectionTypeParser {
 
     // Parse sanity
     if (baseObj.has("sanity") && !baseObj.isNull("sanity")) {
-      config.setSanity(baseObj.getString("sanity"));
+      final String value = baseObj.getString("sanity");
+      config.setSanity(value);
     }
 
     // Parse tags
     if (baseObj.has("tags") && !baseObj.isNull("tags")) {
-      config.setTags(new ArrayList<>(baseObj.getStringArray("tags")));
+      final JSONArrayHandle array = baseObj.getArray("tags");
+      final List<String> list = new ArrayList<>();
+      array.forEachString(list::add);
+      config.setTags(list);
     }
 
     // Parse metadata
@@ -53,15 +58,18 @@ public class TestSimpleCollectionTypeParser {
       final JSONObjectHandle obj = baseObj.getObject("metadata");
       final Map<String, String> map = new LinkedHashMap<>();
       obj.keySet().forEach(key -> {
-        final String value = obj.getString(key);
-        map.put(key, value);
+        final String level2Value = obj.getString(key);
+        map.put(key, level2Value);
       });
       config.setMetadata(map);
     }
 
     // Parse explicitArrayList
     if (baseObj.has("explicitArrayList") && !baseObj.isNull("explicitArrayList")) {
-      config.setExplicitArrayList(new ArrayList<>(baseObj.getStringArray("explicitArrayList")));
+      final JSONArrayHandle array = baseObj.getArray("explicitArrayList");
+      final ArrayList<String> list = new ArrayList<>();
+      array.forEachString(list::add);
+      config.setExplicitArrayList(list);
     }
 
     // Parse explicitHashMap
@@ -69,8 +77,8 @@ public class TestSimpleCollectionTypeParser {
       final JSONObjectHandle obj = baseObj.getObject("explicitHashMap");
       final HashMap<String, Integer> map = new HashMap<>();
       obj.keySet().forEach(key -> {
-        final Integer value = obj.getInteger(key);
-        map.put(key, value);
+        final Integer level2Value = obj.getInteger(key);
+        map.put(key, level2Value);
       });
       config.setExplicitHashMap(map);
     }

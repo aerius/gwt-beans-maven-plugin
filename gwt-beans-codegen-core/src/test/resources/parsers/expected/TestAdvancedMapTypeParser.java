@@ -77,10 +77,10 @@ public class TestAdvancedMapTypeParser {
 
     // Parse complexKeyMap
     if (baseObj.has("complexKeyMap") && !baseObj.isNull("complexKeyMap")) {
-      final JSONObjectHandle mapObj = baseObj.getObject("complexKeyMap");
+      final JSONObjectHandle obj = baseObj.getObject("complexKeyMap");
       final Map<TestComplexKeyType, Double> map = new LinkedHashMap<>();
-      mapObj.keySet().forEach(key -> {
-        final Double value = mapObj.getNumber(key);
+      obj.keySet().forEach(key -> {
+        final Double value = obj.getNumber(key);
         map.put(TestComplexKeyType.fromStringValue(key), value);
       });
       config.setComplexKeyMap(map);

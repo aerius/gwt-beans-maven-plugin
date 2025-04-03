@@ -41,20 +41,20 @@ public class TestEnumListTypeParser {
 
     // Parse statusList
     if (baseObj.has("statusList") && !baseObj.isNull("statusList")) {
-      final List<TestEnumType.Status> statusList = new ArrayList<>();
+      final List<TestEnumType.Status> list = new ArrayList<>();
       baseObj.getArray("statusList").forEachString(str -> {
-        statusList.add(TestEnumType.Status.valueOf(str));
+        list.add(TestEnumType.Status.valueOf(str));
       });
-      config.setStatusList(statusList);
+      config.setStatusList(list);
     }
 
     // Parse statusSet
     if (baseObj.has("statusSet") && !baseObj.isNull("statusSet")) {
-      final Set<TestEnumType.Status> statusSet = new HashSet<>();
+      final Set<TestEnumType.Status> set = new HashSet<>();
       baseObj.getArray("statusSet").forEachString(str -> {
-        statusSet.add(TestEnumType.Status.valueOf(str));
+        set.add(TestEnumType.Status.valueOf(str));
       });
-      config.setStatusSet(statusSet);
+      config.setStatusSet(set);
     }
 
     // Parse statusMap

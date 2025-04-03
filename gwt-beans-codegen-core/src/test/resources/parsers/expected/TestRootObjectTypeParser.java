@@ -43,17 +43,20 @@ public class TestRootObjectTypeParser {
 
     // Parse foo
     if (baseObj.has("foo") && !baseObj.isNull("foo")) {
-      config.setFoo(baseObj.getString("foo"));
+      final String value = baseObj.getString("foo");
+      config.setFoo(value);
     }
 
     // Parse count
     if (baseObj.has("count")) {
-      config.setCount(baseObj.getInteger("count"));
+      final int value = baseObj.getInteger("count");
+      config.setCount(value);
     }
 
     // Parse active
     if (baseObj.has("active")) {
-      config.setActive(baseObj.getBoolean("active"));
+      final boolean value = baseObj.getBoolean("active");
+      config.setActive(value);
     }
 
     // Parse simpleCollection
