@@ -11,6 +11,7 @@ import javax.annotation.processing.Generated;
 
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
+import nl.aerius.json.JSONArrayHandle;
 import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
@@ -41,18 +42,36 @@ public class TestEnumListTypeParser {
 
     // Parse statusList
     if (baseObj.has("statusList") && !baseObj.isNull("statusList")) {
+      final JSONArrayHandle array = baseObj.getArray("statusList");
       final List<TestEnumType.Status> list = new ArrayList<>();
-      baseObj.getArray("statusList").forEachString(str -> {
-        list.add(TestEnumType.Status.valueOf(str));
+      array.forEachString(item -> {
+        TestEnumType.Status level2Value = null;
+        if (item != null) {
+          try {
+            level2Value = TestEnumType.Status.valueOf(item);
+          } catch (IllegalArgumentException e) {
+            // Invalid enum value, leave as default;
+          }
+        }
+        list.add(level2Value);
       });
       config.setStatusList(list);
     }
 
     // Parse statusSet
     if (baseObj.has("statusSet") && !baseObj.isNull("statusSet")) {
+      final JSONArrayHandle array = baseObj.getArray("statusSet");
       final Set<TestEnumType.Status> set = new HashSet<>();
-      baseObj.getArray("statusSet").forEachString(str -> {
-        set.add(TestEnumType.Status.valueOf(str));
+      array.forEachString(item -> {
+        TestEnumType.Status level2Value = null;
+        if (item != null) {
+          try {
+            level2Value = TestEnumType.Status.valueOf(item);
+          } catch (IllegalArgumentException e) {
+            // Invalid enum value, leave as default;
+          }
+        }
+        set.add(level2Value);
       });
       config.setStatusSet(set);
     }

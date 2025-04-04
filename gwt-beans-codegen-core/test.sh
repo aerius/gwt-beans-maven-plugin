@@ -36,16 +36,16 @@ run_test() {
 }
 
 # Run all tests in sequence
-run_test "test-step1-expected-roundtrip.sh" "Step 1: Expected Parser Roundtrip Test"
+run_test "t1-expected-roundtrip.sh" "Step 1: Expected Parser Roundtrip Test"
 step1_status=$?
 
-run_test "test-step2-generated-validation.sh" "Step 2: Generated Parser Validation Test"
+run_test "t2-generated-validation.sh" "Step 2: Generated Parser Validation Test"
 step2_status=$?
 
-run_test "test-step3-generated-roundtrip.sh" "Step 3: Generated Parser Roundtrip Test"
+run_test "t3-generated-roundtrip.sh" "Step 3: Generated Parser Roundtrip Test"
 step3_status=$?
 
-run_test "test-step4-verify-custom-parsers.sh" "Step 4: Custom Parser Verification Test"
+run_test "t4-verify-custom.sh" "Step 4: Custom Parser Verification Test"
 step4_status=$?
 
 run_test "test-unsupported-types.sh" "Step 5: Unsupported Types Test"

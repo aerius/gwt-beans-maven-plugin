@@ -106,7 +106,8 @@ public class TestNestedMapTypeParser {
           });
           level2Map.put(level2Key, level3Map);
         });
-        map.put(TestEnumType.Status.valueOf(key), level2Map);
+        final TestEnumType.Status enumKey = TestEnumType.Status.valueOf(key);
+        map.put(enumKey, level2Map);
       });
       config.setEnumKeyNestedMap(map);
     }

@@ -10,6 +10,7 @@ import javax.annotation.processing.Generated;
 import nl.aerius.codegen.test.types.TestAdvancedMapType;
 import nl.aerius.codegen.test.types.TestComplexKeyType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
+import nl.aerius.json.JSONArrayHandle;
 import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
@@ -42,7 +43,10 @@ public class TestAdvancedMapTypeParser {
       final JSONObjectHandle obj = baseObj.getObject("doubleListMap");
       final Map<String, List<Double>> map = new LinkedHashMap<>();
       obj.keySet().forEach(key -> {
-        map.put(key, obj.getNumberArray(key));
+        final JSONArrayHandle level2Array = obj.getArray(key);
+        final List<Double> level2List = new ArrayList<>();
+        level2Array.forEachNumber(level2List::add);
+        map.put(key, level2List);
       });
       config.setDoubleListMap(map);
     }
@@ -52,7 +56,10 @@ public class TestAdvancedMapTypeParser {
       final JSONObjectHandle obj = baseObj.getObject("stringListMap");
       final Map<String, List<String>> map = new LinkedHashMap<>();
       obj.keySet().forEach(key -> {
-        map.put(key, obj.getStringArray(key));
+        final JSONArrayHandle level2Array = obj.getArray(key);
+        final List<String> level2List = new ArrayList<>();
+        level2Array.forEachString(level2List::add);
+        map.put(key, level2List);
       });
       config.setStringListMap(map);
     }
@@ -62,35 +69,33 @@ public class TestAdvancedMapTypeParser {
       final JSONObjectHandle obj = baseObj.getObject("objectListMap");
       final Map<String, List<TestSimpleTypesType>> map = new LinkedHashMap<>();
       obj.keySet().forEach(key -> {
-        final List<TestSimpleTypesType> list = new ArrayList<>();
-        obj.getArray(key).forEach(item -> {
-          final TestSimpleTypesType value = TestSimpleTypesTypeParser.parse(item);
-          list.add(value);
+        final JSONArrayHandle level2Array = obj.getArray(key);
+        final List<TestSimpleTypesType> level2List = new ArrayList<>();
+        level2Array.forEach(level2Item -> {
+          final TestSimpleTypesType level3Value = TestSimpleTypesTypeParser.parse(level2Item);
+          level2List.add(level3Value);
         });
-        map.put(key, list);
+        map.put(key, level2List);
       });
       config.setObjectListMap(map);
     }
 
-    // Parse interfaceMap
-    // Skipping field with complex generic type: interfaceMap
+    // Skipping ignored field: interfaceMap
 
     // Parse complexKeyMap
     if (baseObj.has("complexKeyMap") && !baseObj.isNull("complexKeyMap")) {
       final JSONObjectHandle obj = baseObj.getObject("complexKeyMap");
       final Map<TestComplexKeyType, Double> map = new LinkedHashMap<>();
       obj.keySet().forEach(key -> {
-        final Double value = obj.getNumber(key);
-        map.put(TestComplexKeyType.fromStringValue(key), value);
+        final Double level2Value = obj.getNumber(key);
+        map.put(TestComplexKeyType.fromStringValue(key), level2Value);
       });
       config.setComplexKeyMap(map);
     }
 
-    // Parse wildcardListMap
-    // Skipping field with complex generic type: wildcardListMap
+    // Skipping ignored field: wildcardListMap
 
-    // Parse wildcardKeyMap
-    // Skipping field with complex generic type: wildcardKeyMap
+    // Skipping ignored field: wildcardKeyMap
 
     // Parse sanity
     if (baseObj.has("sanity") && !baseObj.isNull("sanity")) {

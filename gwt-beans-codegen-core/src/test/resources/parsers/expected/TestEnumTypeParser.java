@@ -32,26 +32,30 @@ public class TestEnumTypeParser {
 
     // Parse status
     if (baseObj.has("status") && !baseObj.isNull("status")) {
-      final String statusStr = baseObj.getString("status");
-      if (statusStr != null) {
+      final String str = baseObj.getString("status");
+      TestEnumType.Status value = null;
+      if (str != null) {
         try {
-          config.setStatus(TestEnumType.Status.valueOf(statusStr));
+          value = TestEnumType.Status.valueOf(str);
         } catch (IllegalArgumentException e) {
           // Invalid enum value, leave as default
         }
       }
+      config.setStatus(value);
     }
 
     // Parse priority
     if (baseObj.has("priority") && !baseObj.isNull("priority")) {
-      final String priorityStr = baseObj.getString("priority");
-      if (priorityStr != null) {
+      final String str = baseObj.getString("priority");
+      TestEnumType.Priority value = null;
+      if (str != null) {
         try {
-          config.setPriority(TestEnumType.Priority.valueOf(priorityStr));
+          value = TestEnumType.Priority.valueOf(str);
         } catch (IllegalArgumentException e) {
           // Invalid enum value, leave as default
         }
       }
+      config.setPriority(value);
     }
 
     // Parse nullableStatus
