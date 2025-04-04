@@ -17,7 +17,7 @@ import com.palantir.javapoet.CodeBlock;
  * Common utilities for parser generation.
  */
 public final class ParserCommonUtils {
-  // JSON handling constants - Always use the AERIUS JSONObjectHandle and JSONArrayHandle
+  // JSON handling constants - Always use the AERIUS JSONObjectHandle and JSONArrayHandle for GWT target
   private static final ClassName JSON_OBJECT_HANDLE = ClassName.get("nl.aerius.wui.service.json", "JSONObjectHandle");
   private static final ClassName JSON_ARRAY_HANDLE = ClassName.get("nl.aerius.wui.service.json", "JSONArrayHandle");
 
@@ -206,5 +206,40 @@ public final class ParserCommonUtils {
    */
   public static boolean isPrimitiveType(Type type) {
     return (type instanceof Class<?>) && ((Class<?>) type).isPrimitive();
+  }
+
+  /**
+   * Checks if the given type is an interface.
+   */
+  public static boolean isInterface(Type type) {
+    return (type instanceof Class<?>) && ((Class<?>) type).isInterface();
+  }
+
+  /**
+   * Checks if the given type is a wildcard type (?).
+   */
+  public static boolean isWildcard(Type type) {
+    return type instanceof java.lang.reflect.WildcardType;
+  }
+
+  /**
+   * Checks if the given type or its type arguments contain a wildcard.
+   * Recursively checks parameterized types.
+   */
+  public static boolean containsWildcard(Type type) {
+    if (isWildcard(type)) {
+      return true;
+    }
+    if (type instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) type;
+      for (Type arg : pt.getActualTypeArguments()) {
+        if (containsWildcard(arg)) {
+          return true;
+        }
+      }
+    }
+    // Add check for GenericArrayType if necessary
+    // if (type instanceof GenericArrayType) { ... }
+    return false;
   }
 }

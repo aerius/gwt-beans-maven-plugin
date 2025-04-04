@@ -293,6 +293,24 @@ public final class ParserWriterUtils {
       if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())
           && !java.lang.reflect.Modifier.isTransient(field.getModifiers())
           && !field.isSynthetic()) {
+
+        // ==> INSERT @JsonIgnore CHECK HERE <==
+        try {
+          Class<? extends java.lang.annotation.Annotation> jsonIgnoreAnnotation = (Class<? extends java.lang.annotation.Annotation>) Class
+              .forName("com.fasterxml.jackson.annotation.JsonIgnore");
+          if (field.isAnnotationPresent(jsonIgnoreAnnotation)) {
+            methodBuilder.addCode("\n"); // Add newline for spacing
+            methodBuilder.addComment("Skipping ignored field: $L", field.getName());
+            continue; // Skip processing this ignored field
+          }
+        } catch (ClassNotFoundException e) {
+          // Log or handle the case where JsonIgnore annotation class is not available on the classpath during generation
+          methodBuilder.addCode("\n");
+          methodBuilder.addComment("WARNING: Cannot check for @JsonIgnore, com.fasterxml.jackson.annotation.JsonIgnore not found.");
+          // Proceed without checking - might generate code for ignored fields if annotation is used but class not found
+        }
+        // ==> END @JsonIgnore CHECK <==
+
         methodBuilder.addCode("\n");
         methodBuilder.addComment("Parse $L", field.getName());
         // Determine if null check is required (true for non-primitives)

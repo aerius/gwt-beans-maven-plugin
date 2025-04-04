@@ -118,7 +118,7 @@ public class CollectionFieldParser implements TypeParser {
     String arrayVar = ParserCommonUtils.getVariableNameForLevel(level, "Array");
     String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
 
-    // 1. Get JSON Array
+    // 1. Get JSON Array - Use $T for ClassName
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayVar, accessExpression);
     // 2. Declare using the exact fieldType, instantiate using IMPL
     code.addStatement("final $T $L = new $T<>()", fieldType, resultVarName, collectionImpl);
@@ -126,11 +126,29 @@ public class CollectionFieldParser implements TypeParser {
     String specificForEach = getSpecificForEachMethod(elementType);
 
     if (specificForEach != null) {
+      // Handle simple types with specific forEach methods
       code.addStatement("$L.$L($L::add)", arrayVar, specificForEach, resultVarName);
+    } else if (elementType instanceof Class<?> && ((Class<?>) elementType).isEnum()) {
+      // Handle Enum types using forEachString
+      String strVar = itemVar; // Reuse itemVar name for the string in the lambda
+      String enumValueVar = ParserCommonUtils.getVariableNameForLevel(level + 1, "Value");
+      code.add("$L.forEachString($L -> {\n", arrayVar, strVar)
+          .indent()
+          .addStatement("$T $L = null", elementType, enumValueVar)
+          .beginControlFlow("if ($L != null)", strVar)
+          .beginControlFlow("try")
+          .addStatement("$L = $T.valueOf($L)", enumValueVar, elementType, strVar)
+          .nextControlFlow("catch ($T e)", IllegalArgumentException.class)
+          .addStatement("// Invalid enum value, leave as default")
+          .endControlFlow()
+          .endControlFlow()
+          .addStatement("$L.add($L)", resultVarName, enumValueVar)
+          .unindent()
+          .addStatement("})");
     } else {
+      // Handle complex types (Objects, other Collections/Maps) using generic forEach and dispatch
       code.add("$L.forEach($L -> {\n", arrayVar, itemVar)
           .indent();
-      // Call dispatch with 7 parameters
       Type elementFieldType = getElementTypeFromCollectionType(fieldType);
       String elementVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
           code, elementType, null, parserPackage, CodeBlock.of("$L", itemVar), level + 1, elementFieldType);
@@ -150,7 +168,7 @@ public class CollectionFieldParser implements TypeParser {
     String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
     String indexVar = ParserCommonUtils.getVariableNameForLevel(level, "Index");
 
-    // 1. Get the JSON Array
+    // 1. Get the JSON Array - Use $T for ClassName
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayJsonVar, accessExpression);
     // 2. Create the Java Array instance
     // Use length() method of JSONArrayHandle
@@ -193,7 +211,7 @@ public class CollectionFieldParser implements TypeParser {
     String tempListVar = ParserCommonUtils.getVariableNameForLevel(level, "TempList");
 
     // Cannot directly create generic array T[]. Create List first, then convert.
-    // 1. Get the JSON Array
+    // 1. Get the JSON Array - Use $T for ClassName
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayJsonVar, accessExpression);
     // 2. Create intermediate List
     code.addStatement("final $T<$T> $L = new $T<>()", java.util.List.class, componentType, tempListVar, java.util.ArrayList.class);

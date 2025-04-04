@@ -25,9 +25,14 @@ public final class ParserTestUtils {
    * This allows testing the generated parsers without GWT dependencies.
    */
   public static String replaceJsonImportsForTesting(String generatedCode) {
-    return generatedCode.replace(
+    String updatedCode = generatedCode.replace(
         GWT_JSON_PACKAGE + ".JSONObjectHandle",
         TEST_JSON_PACKAGE + ".JSONObjectHandle");
+    // Also replace JSONArrayHandle
+    updatedCode = updatedCode.replace(
+        GWT_JSON_PACKAGE + ".JSONArrayHandle",
+        TEST_JSON_PACKAGE + ".JSONArrayHandle");
+    return updatedCode;
   }
 
   /**
