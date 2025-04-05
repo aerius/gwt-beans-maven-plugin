@@ -233,10 +233,9 @@ public class TypeAnalyzer {
   }
 
   private void addTypeForGeneration(final Class<?> type) {
-    // Don't generate parsers for enums, types with custom parsers, or complex key types
-    if (type.isEnum() || 
-        customParserTypes.contains(type.getSimpleName()) || 
-        isComplexKeyType(type)) {
+    // Don't generate parsers for enums or types with explicitly registered custom parsers.
+    // Let the generator handle complex key types if they appear as values.
+    if (type.isEnum() || customParserTypes.contains(type.getSimpleName())) {
       return;
     }
 
