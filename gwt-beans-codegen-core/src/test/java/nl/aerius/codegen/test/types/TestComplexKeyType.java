@@ -9,8 +9,10 @@ import com.fasterxml.jackson.annotation.JsonKey;
  * for serialization and deserialization of complex map keys.
  */
 public class TestComplexKeyType {
-  private final String name;
-  private final int value;
+  private String name;
+  private int value;
+
+  public TestComplexKeyType() {}
 
   public TestComplexKeyType(String name, int value) {
     this.name = name;
@@ -21,8 +23,16 @@ public class TestComplexKeyType {
     return name;
   }
 
+  public void setName(String name) {
+    this.name = name;
+  }
+
   public int getValue() {
     return value;
+  }
+
+  public void setValue(int value) {
+    this.value = value;
   }
 
   /**
