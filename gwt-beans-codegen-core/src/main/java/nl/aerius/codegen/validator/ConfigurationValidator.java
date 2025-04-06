@@ -312,16 +312,23 @@ public class ConfigurationValidator {
     // Check for either public getter or @JsonProperty
     final boolean hasJsonProperty = field.isAnnotationPresent(JsonProperty.class);
     boolean hasValidGetter = false;
+    Method foundGetter = null; // Store the getter method if found
 
     try {
       final Method getter = clazz.getMethod("get" + capitalizedName);
-      hasValidGetter = Modifier.isPublic(getter.getModifiers());
+      if (Modifier.isPublic(getter.getModifiers())) {
+        hasValidGetter = true;
+        foundGetter = getter; // Store the getter
+      }
     } catch (NoSuchMethodException e) {
       // Try isGetter for boolean
       if (field.getType().equals(Boolean.class) || field.getType().equals(boolean.class)) {
         try {
           final Method isGetter = clazz.getMethod("is" + capitalizedName);
-          hasValidGetter = Modifier.isPublic(isGetter.getModifiers());
+          if (Modifier.isPublic(isGetter.getModifiers())) {
+            hasValidGetter = true;
+            foundGetter = isGetter; // Store the getter
+          }
         } catch (NoSuchMethodException e2) {
           hasValidGetter = false;
         }
@@ -333,6 +340,15 @@ public class ConfigurationValidator {
           + "' must have either a public getter or @JsonProperty annotation");
       hasErrors = true;
       isValid = false;
+    } else if (hasValidGetter && !hasJsonProperty) {
+      // If only a getter is present, check if its return type matches the field type
+      if (foundGetter != null && !foundGetter.getReturnType().equals(field.getType())) {
+        System.out.println(RED_CROSS + " " + clazz.getName() + ": Field '" + fieldName + "' type ("
+            + field.getType().getName() + ") does not match public getter '" + foundGetter.getName()
+            + "' return type (" + foundGetter.getReturnType().getName() + ")");
+        hasErrors = true;
+        isValid = false;
+      }
     }
 
     // Always check setter
