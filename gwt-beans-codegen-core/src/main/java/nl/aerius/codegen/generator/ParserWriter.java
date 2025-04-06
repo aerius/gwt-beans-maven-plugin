@@ -13,16 +13,15 @@ import com.palantir.javapoet.TypeSpec;
 public class ParserWriter {
   private final String outputDir;
   private final String parserPackage;
-  private final String generatedTimestamp;
+  private final String generatorName;
+  private final String generatorDetails;
 
-  public ParserWriter(final String outputDir, final String parserPackage) {
-    this(outputDir, parserPackage, java.time.LocalDateTime.now().toString());
-  }
-
-  public ParserWriter(final String outputDir, final String parserPackage, final String generatedTimestamp) {
+  public ParserWriter(final String outputDir, final String parserPackage, final String generatorName,
+      final String generatorDetails) {
     this.outputDir = outputDir;
     this.parserPackage = parserPackage;
-    this.generatedTimestamp = generatedTimestamp;
+    this.generatorName = generatorName;
+    this.generatorDetails = generatorDetails;
   }
 
   /**
@@ -34,8 +33,9 @@ public class ParserWriter {
 
     System.out.println("Generating " + parserClassName);
 
-    // Create the parser type specification
-    final TypeSpec.Builder typeSpec = ParserWriterUtils.createParserTypeSpec(parserClassName, generatedTimestamp);
+    // Create the parser type specification, passing both name and details
+    final TypeSpec.Builder typeSpec = ParserWriterUtils.createParserTypeSpec(parserClassName, generatorName,
+        generatorDetails);
 
     // Add parser methods
     ParserWriterUtils.generateParserForFields(typeSpec, targetClass, parserPackage);

@@ -99,10 +99,10 @@ public final class ParserWriterUtils {
   /**
    * Creates a new parser type specification with standard annotations.
    */
-  public static TypeSpec.Builder createParserTypeSpec(String className, String generatedTimestamp) {
+  public static TypeSpec.Builder createParserTypeSpec(String className, String generatorName, String generatorDetails) {
     return TypeSpec.classBuilder(className)
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(ParserCommonUtils.createGeneratedAnnotation(generatedTimestamp));
+        .addAnnotation(ParserCommonUtils.createGeneratedAnnotation(generatorName, generatorDetails));
   }
 
   /**

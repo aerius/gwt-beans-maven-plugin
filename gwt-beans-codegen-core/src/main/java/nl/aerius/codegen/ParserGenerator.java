@@ -127,6 +127,10 @@ public class ParserGenerator {
     generateParsers(rootClassName, outputDir, parserPackage, null);
   }
 
+  /**
+   * Entry point that loads the class, discovers custom parsers, validates,
+   * determines generator info, and calls the generation logic.
+   */
   public static void generateParsers(String rootClassName, String outputDir, String parserPackage,
       String customParserDir)
       throws IOException, ClassNotFoundException {
@@ -149,7 +153,15 @@ public class ParserGenerator {
 
     // Generate parsers
     System.out.println("\nStep 3: Generating Parsers");
-    generateParsersForClass(rootClass, parserPackage, outputDir, customParserDir);
+
+    // Determine generator info HERE before calling the recursive/detailed method
+    String projectVersion = System.getProperty("generator.version", "unknown-version");
+    String gitHash = System.getProperty("generator.githash", "unknown-hash");
+    String generatorName = ParserGenerator.class.getName();
+    String generatorDetails = String.format("version: %s (git: %s)", projectVersion, gitHash);
+
+    // Call the main generation method with the determined info
+    generateParsersForClass(rootClass, parserPackage, outputDir, customParserDir, generatorName, generatorDetails);
   }
 
   private static void validateConfiguration(Class<?> rootClass, Set<String> customParserTypes) {
@@ -161,20 +173,22 @@ public class ParserGenerator {
     }
   }
 
-  public static void generateParsersForClass(Class<?> targetClass, String parserPackage, String outputDir)
-      throws IOException {
-    generateParsersForClass(targetClass, parserPackage, outputDir, null);
-  }
-
+  /**
+   * Generates parsers for the given target class and all its dependencies.
+   *
+   * @param targetClass     The root class to start analysis from.
+   * @param parserPackage   The package name for the generated parsers.
+   * @param outputDir       The directory where generated source files will be written.
+   * @param customParserDir Optional directory containing custom parser implementations.
+   * @param generatorName   The name of the generator tool for the @Generated annotation's 'value' element.
+   * @param generatorDetails Additional details (version/hash) for the @Generated annotation's 'comments' element.
+   * @throws IOException If an error occurs during file writing.
+   */
   public static void generateParsersForClass(Class<?> targetClass, String parserPackage, String outputDir,
-      String customParserDir) throws IOException {
-    generateParsersForClass(targetClass, parserPackage, outputDir, customParserDir,
-        java.time.LocalDateTime.now().toString());
-  }
-
-  public static void generateParsersForClass(Class<?> targetClass, String parserPackage, String outputDir,
-      String customParserDir, String timestamp) throws IOException {
+      String customParserDir, String generatorName, String generatorDetails) throws IOException {
     System.out.println("Generating parsers for " + targetClass.getName());
+    System.out.println("Generator Name: " + generatorName);
+    System.out.println("Generator Details: " + generatorDetails);
 
     try {
       // Find custom parsers first (if a custom parser directory is provided)
@@ -196,7 +210,8 @@ public class ParserGenerator {
       clearOutputDirectory(outputDir);
 
       // Create a parser writer and generate all parsers
-      final ParserWriter parserWriter = new ParserWriter(outputDir, parserPackage, timestamp);
+      // Pass the generator name and details (version + hash) to the writer
+      final ParserWriter parserWriter = new ParserWriter(outputDir, parserPackage, generatorName, generatorDetails);
       parserWriter.generateParsers(filteredClassNames);
 
       System.out.println("\nParser generation completed successfully!");

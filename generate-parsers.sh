@@ -17,7 +17,6 @@ print_usage() {
 }
 
 echo "Debug: Script started"
-echo "Debug: Script directory is $SCRIPT_DIR"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -66,28 +65,67 @@ PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
 
 # Get the directory where this script is located
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+GENERATOR_CORE_DIR="$SCRIPT_DIR/gwt-beans-codegen-core" # Define generator dir
 
-echo "Debug: Building in directory: $SCRIPT_DIR/gwt-beans-codegen-core"
+echo "Debug: Script Directory: $SCRIPT_DIR"
+echo "Debug: Generator Core Directory: $GENERATOR_CORE_DIR"
+echo "Debug: Checking contents of Generator Core Directory:"
+ls -la "$GENERATOR_CORE_DIR" || echo "Debug: Failed to list contents of $GENERATOR_CORE_DIR"
+
+echo "Debug: Building in directory: $GENERATOR_CORE_DIR"
 echo "Debug: Checking if directory exists..."
-if [[ ! -d "$SCRIPT_DIR/gwt-beans-codegen-core" ]]; then
-    echo "Error: Build directory does not exist: $SCRIPT_DIR/gwt-beans-codegen-core"
+if [[ ! -d "$GENERATOR_CORE_DIR" ]]; then
+    echo "Error: Build directory does not exist: $GENERATOR_CORE_DIR"
     exit 1
 fi
 
 echo "Debug: Checking for pom.xml..."
-if [[ ! -f "$SCRIPT_DIR/gwt-beans-codegen-core/pom.xml" ]]; then
+if [[ ! -f "$GENERATOR_CORE_DIR/pom.xml" ]]; then
     echo "Error: pom.xml not found in build directory"
     exit 1
 fi
 
 echo "Building GWT Bean Parser Generator..."
-(cd "$SCRIPT_DIR/gwt-beans-codegen-core" && mvn clean -q package -DskipTests)
+(cd "$GENERATOR_CORE_DIR" && mvn clean -q package -DskipTests)
+
+# --- Added Debugging ---
+echo "Debug: Attempting to get generator version..."
+# Use N/A as default to distinguish from empty string
+# Add -B for batch mode to further suppress logs
+GENERATOR_VERSION=$(cd "$GENERATOR_CORE_DIR" && mvn -B help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null || echo "N/A")
+MVN_EXIT_CODE=$?
+echo "Debug: mvn help:evaluate exit code: $MVN_EXIT_CODE"
+# Trim potential whitespace/newlines from Maven output
+GENERATOR_VERSION=$(echo "$GENERATOR_VERSION" | xargs)
+# Set to unknown-version if mvn failed or returned N/A or empty
+if [[ $MVN_EXIT_CODE -ne 0 || "$GENERATOR_VERSION" == "N/A" || -z "$GENERATOR_VERSION" ]]; then
+    echo "Debug: Failed to get version from Maven, using default."
+    GENERATOR_VERSION="unknown-version"
+fi
+echo "Debug: Captured Generator Version: '$GENERATOR_VERSION'"
+
+echo "Debug: Attempting to get git hash..."
+# Use N/A as default
+GENERATOR_GIT_HASH=$(cd "$GENERATOR_CORE_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "N/A")
+GIT_EXIT_CODE=$?
+echo "Debug: git rev-parse exit code: $GIT_EXIT_CODE"
+# Trim potential whitespace/newlines
+GENERATOR_GIT_HASH=$(echo "$GENERATOR_GIT_HASH" | xargs)
+# Set to unknown-git if git failed or returned N/A or empty
+if [[ $GIT_EXIT_CODE -ne 0 || "$GENERATOR_GIT_HASH" == "N/A" || -z "$GENERATOR_GIT_HASH" ]]; then
+    echo "Debug: Failed to get git hash, using default."
+    GENERATOR_GIT_HASH="unknown-git"
+fi
+echo "Debug: Captured Generator Git Hash: '$GENERATOR_GIT_HASH'"
+# --- End Debugging additions ---
 
 echo "Debug: Checking if JAR was built..."
-if [[ ! -f "$SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar" ]]; then
-    echo "Error: Build failed - JAR file not found"
+GENERATOR_JAR="$GENERATOR_CORE_DIR/target/gwt-beans-codegen-shaded.jar"
+if [[ ! -f "$GENERATOR_JAR" ]]; then
+    echo "Error: Build failed - JAR file not found at $GENERATOR_JAR"
     exit 1
 fi
+echo "Debug: Generator JAR found: $GENERATOR_JAR"
 
 echo "Building target project to ensure classes are available..."
 (cd "$PROJECT_DIR" && mvn clean -q compile)
@@ -99,7 +137,7 @@ DEP_CP=$(cd "$PROJECT_DIR" && mvn dependency:build-classpath -q -DincludeScope=c
 FULL_CP="$TARGET_CP:$DEP_CP"
 
 echo "Debug: Using classpath: $FULL_CP"
-echo "Debug: Using JAR: $SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar"
+echo "Debug: Using JAR: $GENERATOR_JAR"
 
 # Prepare generator arguments
 GENERATOR_ARGS=(
@@ -112,8 +150,11 @@ if [[ -n "$CUSTOM_PARSER_DIR" ]]; then
     GENERATOR_ARGS+=("--custom-parser-dir" "$CUSTOM_PARSER_DIR")
 fi
 
+# --- Modified java command (ensure variables are passed, remove line continuations) ---
 echo "Running GWT Bean Parser Generator..."
 echo "Debug: Running with arguments: ${GENERATOR_ARGS[@]}"
-java -cp "$FULL_CP:$SCRIPT_DIR/gwt-beans-codegen-core/target/gwt-beans-codegen-shaded.jar" nl.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
+echo "Debug: Passing system properties: -Dgenerator.version='$GENERATOR_VERSION' -Dgenerator.githash='$GENERATOR_GIT_HASH'"
+java -Dgenerator.version="$GENERATOR_VERSION" -Dgenerator.githash="$GENERATOR_GIT_HASH" -cp "$FULL_CP:$GENERATOR_JAR" nl.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
+# --- End Modified java command ---
 
 echo "Parser generation completed successfully!" 

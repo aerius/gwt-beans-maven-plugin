@@ -66,12 +66,16 @@ public abstract class ParserGeneratorTestBase {
   // but they rely on static outputDir.
   protected void generateParser(final Class<?> rootClass) throws IOException {
       if (outputDir == null) throw new IllegalStateException("outputDir not initialized. Ensure setUpDirectories() ran.");
-      ParserGenerator.generateParsersForClass(rootClass, TEST_PACKAGE, outputDir.toString(), TEST_TIMESTAMP);
+      // Call the most specific method, providing fixed generator name and details for testing
+      ParserGenerator.generateParsersForClass(rootClass, TEST_PACKAGE, outputDir.toString(), null /* customParserDir */,
+          "nl.aerius.codegen.ParserGenerator", TEST_TIMESTAMP);
   }
 
   protected void generateParser(final Class<?> rootClass, final String customParserDir) throws IOException {
       if (outputDir == null) throw new IllegalStateException("outputDir not initialized. Ensure setUpDirectories() ran.");
-      ParserGenerator.generateParsersForClass(rootClass, TEST_PACKAGE, outputDir.toString(), customParserDir, TEST_TIMESTAMP);
+      // Call the most specific method, providing fixed generator name and details for testing
+      ParserGenerator.generateParsersForClass(rootClass, TEST_PACKAGE, outputDir.toString(), customParserDir, "nl.aerius.codegen.ParserGenerator",
+          TEST_TIMESTAMP);
   }
 
   // This method modifies files, so fine as non-static if called after generation

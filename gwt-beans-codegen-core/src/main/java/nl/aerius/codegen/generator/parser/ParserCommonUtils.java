@@ -60,11 +60,16 @@ public final class ParserCommonUtils {
 
   /**
    * Creates a Generated annotation for parser classes.
+   *
+   * @param generatorName    The name of the generator tool (e.g., class name).
+   * @param generatorDetails Additional details like version and Git hash.
+   * @return The configured AnnotationSpec.
    */
-  public static AnnotationSpec createGeneratedAnnotation(String timestamp) {
+  public static AnnotationSpec createGeneratedAnnotation(String generatorName, String generatorDetails) {
     return AnnotationSpec.builder(Generated.class)
-        .addMember("value", "$S", "nl.aerius.codegen.ParserGenerator")
-        .addMember("date", "$S", timestamp)
+        .addMember("value", "$S", generatorName) // Use generator name for value
+        // .addMember("date", "$S", timestamp)        // Remove date element
+        .addMember("comments", "$S", generatorDetails) // Use details for comments
         .build();
   }
 
