@@ -76,10 +76,6 @@ public class EnumFieldParser implements TypeParser {
     // Find a potential @JsonCreator method using the common utility
     Method jsonCreatorMethod = ParserCommonUtils.findJsonCreatorMethod(enumType);
 
-    // Log the enum type and whether a JsonCreator method exists
-    System.out.println("EnumFieldParser processing type: " + enumType.getName());
-    System.out.println("JsonCreator method found: " + (jsonCreatorMethod != null ? "yes - " + jsonCreatorMethod.getName() : "no"));
-
     // Get the string value from JSON
     code.addStatement("final String $L = $L", strVarName, accessExpression);
     // Declare the result variable (nullable)

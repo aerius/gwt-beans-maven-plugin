@@ -258,7 +258,9 @@ public final class ParserWriterUtils {
         .endControlFlow();
 
     // Check if the class is abstract
-    if (java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())) {
+    if (targetClass.isInterface()) {
+      methodBuilder.addStatement("return null");
+    } else if (java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())) {
       methodBuilder.addStatement("throw new UnsupportedOperationException(\"Cannot create an instance of an abstract class\")");
     } else {
       methodBuilder.addStatement("final $T config = new $T()", targetClass, targetClass)
