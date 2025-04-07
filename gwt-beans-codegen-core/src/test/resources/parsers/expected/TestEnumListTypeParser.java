@@ -50,7 +50,7 @@ public class TestEnumListTypeParser {
           try {
             level2Value = TestEnumType.Status.valueOf(item);
           } catch (IllegalArgumentException e) {
-            // Invalid enum value, leave as default;
+            // Invalid enum value, leave as default
           }
         }
         list.add(level2Value);
@@ -68,7 +68,7 @@ public class TestEnumListTypeParser {
           try {
             level2Value = TestEnumType.Status.valueOf(item);
           } catch (IllegalArgumentException e) {
-            // Invalid enum value, leave as default;
+            // Invalid enum value, leave as default
           }
         }
         set.add(level2Value);

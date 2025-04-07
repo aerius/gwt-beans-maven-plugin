@@ -1,5 +1,7 @@
 package nl.aerius.codegen.generator.parser;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collection;
@@ -26,6 +28,9 @@ public final class ParserCommonUtils {
 
   // Parameter name constants
   public static final String BASE_OBJECT_PARAM_NAME = "baseObj";
+
+  // Added from Enum/Collection parsers
+  private static final String JSON_CREATOR_ANNOTATION = "com.fasterxml.jackson.annotation.JsonCreator";
 
   private ParserCommonUtils() {
     // Utility class, no instantiation
@@ -246,5 +251,39 @@ public final class ParserCommonUtils {
     // Add check for GenericArrayType if necessary
     // if (type instanceof GenericArrayType) { ... }
     return false;
+  }
+
+  /**
+   * Finds a static method annotated with @JsonCreator that takes a single String
+   * argument and returns the enum type.
+   *
+   * @param enumType The enum class to inspect.
+   * @return The Method object if found, otherwise null.
+   */
+  public static Method findJsonCreatorMethod(Class<?> enumType) {
+    // Check if it's actually an enum first
+    if (enumType == null || !enumType.isEnum()) {
+      return null;
+    }
+    try {
+      @SuppressWarnings("unchecked")
+      Class<? extends java.lang.annotation.Annotation> jsonCreatorClass = (Class<? extends java.lang.annotation.Annotation>) Class
+          .forName(JSON_CREATOR_ANNOTATION);
+
+      for (Method method : enumType.getDeclaredMethods()) {
+        if (method.isAnnotationPresent(jsonCreatorClass) &&
+            Modifier.isStatic(method.getModifiers()) &&
+            method.getParameterCount() == 1 &&
+            method.getParameterTypes()[0] == String.class &&
+            method.getReturnType() == enumType) {
+          return method;
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      // Annotation not found, expected if Jackson is not used/available
+    } catch (Exception e) {
+      System.err.println("Warning: Error checking for @JsonCreator on " + enumType.getName() + ": " + e.getMessage());
+    }
+    return null;
   }
 }

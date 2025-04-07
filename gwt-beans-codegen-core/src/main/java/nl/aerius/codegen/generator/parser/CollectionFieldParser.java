@@ -1,6 +1,7 @@
 package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collection;
@@ -118,7 +119,7 @@ public class CollectionFieldParser implements TypeParser {
     String arrayVar = ParserCommonUtils.getVariableNameForLevel(level, "Array");
     String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
 
-    // 1. Get JSON Array - Use $T for ClassName
+    // 1. Get JSON Array
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayVar, accessExpression);
     // 2. Declare using the exact fieldType, instantiate using IMPL
     code.addStatement("final $T $L = new $T<>()", fieldType, resultVarName, collectionImpl);
@@ -129,22 +130,32 @@ public class CollectionFieldParser implements TypeParser {
       // Handle simple types with specific forEach methods
       code.addStatement("$L.$L($L::add)", arrayVar, specificForEach, resultVarName);
     } else if (elementType instanceof Class<?> && ((Class<?>) elementType).isEnum()) {
-      // Handle Enum types using forEachString
+      Class<?> enumElementType = (Class<?>) elementType;
+      Method jsonCreatorMethod = ParserCommonUtils.findJsonCreatorMethod(enumElementType); // Use common util
       String strVar = itemVar; // Reuse itemVar name for the string in the lambda
       String enumValueVar = ParserCommonUtils.getVariableNameForLevel(level + 1, "Value");
+
       code.add("$L.forEachString($L -> {\n", arrayVar, strVar)
           .indent()
-          .addStatement("$T $L = null", elementType, enumValueVar)
-          .beginControlFlow("if ($L != null)", strVar)
-          .beginControlFlow("try")
-          .addStatement("$L = $T.valueOf($L)", enumValueVar, elementType, strVar)
-          .nextControlFlow("catch ($T e)", IllegalArgumentException.class)
-          .addStatement("// Invalid enum value, leave as default")
-          .endControlFlow()
-          .endControlFlow()
+          .addStatement("$T $L = null", enumElementType, enumValueVar)
+          .beginControlFlow("if ($L != null)", strVar);
+
+      if (jsonCreatorMethod != null) {
+        // Use @JsonCreator if found
+        code.addStatement("$L = $T.$L($L)", enumValueVar, enumElementType, jsonCreatorMethod.getName(), strVar);
+      } else {
+        // Fallback to valueOf()
+        code.beginControlFlow("try")
+            .addStatement("$L = $T.valueOf($L)", enumValueVar, enumElementType, strVar)
+            .nextControlFlow("catch ($T e)", IllegalArgumentException.class)
+            .add("// Invalid enum value, leave as default\n")
+            .endControlFlow();
+      }
+
+      code.endControlFlow() // End if (strVar != null)
           .addStatement("$L.add($L)", resultVarName, enumValueVar)
           .unindent()
-          .addStatement("})");
+          .addStatement("})"); // Add closing parenthesis for lambda
     } else {
       // Handle complex types (Objects, other Collections/Maps) using generic forEach and dispatch
       code.add("$L.forEach($L -> {\n", arrayVar, itemVar)
@@ -304,6 +315,8 @@ public class CollectionFieldParser implements TypeParser {
   private Type getComponentTypeFromArrayType(Type arrayType) {
     if (arrayType instanceof java.lang.reflect.GenericArrayType) {
       return ((java.lang.reflect.GenericArrayType) arrayType).getGenericComponentType();
+    } else if (arrayType instanceof Class<?> && ((Class<?>) arrayType).isArray()) { // Handle non-generic arrays
+      return ((Class<?>) arrayType).getComponentType();
     }
     throw new IllegalArgumentException("Cannot determine component type from array type: " + arrayType.getTypeName());
   }

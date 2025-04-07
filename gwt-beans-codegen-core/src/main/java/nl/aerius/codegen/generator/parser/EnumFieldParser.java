@@ -1,6 +1,7 @@
 package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
 import com.palantir.javapoet.CodeBlock;
@@ -72,18 +73,32 @@ public class EnumFieldParser implements TypeParser {
     String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
     String strVarName = ParserCommonUtils.getVariableNameForLevel(level, "str");
 
+    // Find a potential @JsonCreator method using the common utility
+    Method jsonCreatorMethod = ParserCommonUtils.findJsonCreatorMethod(enumType);
+
+    // Log the enum type and whether a JsonCreator method exists
+    System.out.println("EnumFieldParser processing type: " + enumType.getName());
+    System.out.println("JsonCreator method found: " + (jsonCreatorMethod != null ? "yes - " + jsonCreatorMethod.getName() : "no"));
+
     // Get the string value from JSON
     code.addStatement("final String $L = $L", strVarName, accessExpression);
     // Declare the result variable (nullable)
     code.addStatement("$T $L = null", enumType, resultVarName);
-    // Try-catch block for valueOf
-    code.beginControlFlow("if ($L != null)", strVarName)
-        .beginControlFlow("try")
-        .addStatement("$L = $T.valueOf($L)", resultVarName, enumType, strVarName)
-        .nextControlFlow("catch (IllegalArgumentException e)")
-        .add("// Invalid enum value, leave as default\n")
-        .endControlFlow()
-        .endControlFlow();
+
+    // Use @JsonCreator if found, otherwise fallback to valueOf()
+    code.beginControlFlow("if ($L != null)", strVarName);
+    if (jsonCreatorMethod != null) {
+      // Assuming the @JsonCreator method handles invalid input gracefully (e.g., returns null)
+      code.addStatement("$L = $T.$L($L)", resultVarName, enumType, jsonCreatorMethod.getName(), strVarName);
+    } else {
+      // Try-catch block for valueOf as it throws IllegalArgumentException
+      code.beginControlFlow("try")
+          .addStatement("$L = $T.valueOf($L)", resultVarName, enumType, strVarName)
+          .nextControlFlow("catch (IllegalArgumentException e)")
+          .add("// Invalid enum value, leave as default\n")
+          .endControlFlow();
+    }
+    code.endControlFlow(); // End if (strVarName != null)
 
     return resultVarName;
   }
