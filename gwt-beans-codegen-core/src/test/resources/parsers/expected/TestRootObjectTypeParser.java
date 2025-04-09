@@ -38,7 +38,7 @@ public class TestRootObjectTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestRootObjectType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

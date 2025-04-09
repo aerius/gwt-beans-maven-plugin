@@ -31,7 +31,7 @@ public class TestComplexCollectionTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestComplexCollectionType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

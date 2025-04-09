@@ -20,11 +20,11 @@ public class AbstractMiddleTypeParser {
       return null;
     }
 
-    throw new UnsupportedOperationException("Cannot create an instance of an abstract class");
+    throw new UnsupportedOperationException("Cannot directly instantiate abstract class or interface " + AbstractMiddleType.class.getName() + ". Use @JsonTypeInfo or a custom parser.");
   }
 
   public static void parse(final JSONObjectHandle baseObj, final AbstractMiddleType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

@@ -26,7 +26,7 @@ public class ConcreteTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final ConcreteType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

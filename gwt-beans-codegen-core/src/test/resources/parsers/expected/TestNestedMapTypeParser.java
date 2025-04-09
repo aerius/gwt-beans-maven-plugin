@@ -28,7 +28,7 @@ public class TestNestedMapTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestNestedMapType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

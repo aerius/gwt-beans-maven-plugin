@@ -34,7 +34,7 @@ public class TestAdvancedMapTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestAdvancedMapType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

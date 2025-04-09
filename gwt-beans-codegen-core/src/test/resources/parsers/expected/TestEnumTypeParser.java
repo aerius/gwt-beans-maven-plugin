@@ -26,7 +26,7 @@ public class TestEnumTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestEnumType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

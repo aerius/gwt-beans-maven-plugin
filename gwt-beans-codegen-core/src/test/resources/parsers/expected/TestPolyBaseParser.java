@@ -12,8 +12,8 @@ public class TestPolyBaseParser {
     if (jsonText == null) {
       return null;
     }
-    JSONObjectHandle handle = JSONObjectHandle.fromText(jsonText);
-    return parse(handle);
+
+    return parse(JSONObjectHandle.fromText(jsonText));
   }
 
   public static TestPolyBase parse(final JSONObjectHandle baseObj) {
@@ -25,11 +25,7 @@ public class TestPolyBaseParser {
       throw new RuntimeException("Expected string for type discriminator field '_type', got different type");
     }
 
-    String typeName = baseObj.getString("_type");
-    if (typeName == null) {
-      throw new RuntimeException("Type discriminator field '_type' is not a string");
-    }
-
+    final String typeName = baseObj.getString("_type");
     switch (typeName) {
     case "TypeA":
       return TestPolySubAParser.parse(baseObj);
@@ -40,15 +36,15 @@ public class TestPolyBaseParser {
     }
   }
 
-  public static void config(final JSONObjectHandle baseObj, final TestPolyBase instance) {
-    if (baseObj == null) {
+  public static void parse(final JSONObjectHandle baseObj, final TestPolyBase config) {
+    if (baseObj == null || config == null) {
       return;
     }
 
     // Parse baseField
     if (baseObj.has("baseField") && !baseObj.isNull("baseField")) {
       final String value = baseObj.getString("baseField");
-      instance.setBaseField(value);
+      config.setBaseField(value);
     }
   }
 }

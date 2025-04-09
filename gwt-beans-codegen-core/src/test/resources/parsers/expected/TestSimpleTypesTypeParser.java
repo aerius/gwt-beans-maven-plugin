@@ -26,7 +26,7 @@ public class TestSimpleTypesTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestSimpleTypesType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

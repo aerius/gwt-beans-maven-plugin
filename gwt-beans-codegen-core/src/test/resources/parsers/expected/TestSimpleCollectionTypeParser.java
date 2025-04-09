@@ -35,7 +35,7 @@ public class TestSimpleCollectionTypeParser {
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestSimpleCollectionType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 

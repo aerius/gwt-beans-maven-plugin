@@ -26,7 +26,7 @@ public class BaseTypeParser {
   }
   
   public static void parse(final JSONObjectHandle baseObj, final BaseType config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
     

@@ -12,6 +12,8 @@ import java.util.stream.Stream;
 
 import javax.lang.model.element.Modifier;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.JavaFile;
@@ -92,7 +94,12 @@ public final class ParserWriterUtils {
    */
   public static void generateParserForFields(TypeSpec.Builder typeSpec, Class<?> targetClass, String parserPackage) {
     typeSpec.addMethod(createStringParseMethod(targetClass));
-    typeSpec.addMethod(createObjectParseMethod(targetClass, parserPackage));
+    // Decide which kind of object parse method to generate based on polymorphism
+    if (isPolymorphicBase(targetClass)) {
+      typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
+    } else {
+      typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
+    }
     typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage));
   }
 
@@ -246,7 +253,7 @@ public final class ParserWriterUtils {
     return methodBuilder.build();
   }
 
-  private static MethodSpec createObjectParseMethod(Class<?> targetClass, String parserPackage) {
+  private static MethodSpec createStandardObjectParseMethod(Class<?> targetClass, String parserPackage) {
     final ClassName targetClassName = ClassName.get(targetClass);
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
@@ -257,16 +264,67 @@ public final class ParserWriterUtils {
         .addStatement("return null")
         .endControlFlow();
 
-    // Check if the class is abstract
-    if (targetClass.isInterface()) {
-      methodBuilder.addStatement("return null");
-    } else if (java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())) {
-      methodBuilder.addStatement("throw new UnsupportedOperationException(\"Cannot create an instance of an abstract class\")");
+    // Check if the class is abstract or an interface BEFORE attempting instantiation
+    if (targetClass.isInterface() || java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())) {
+      // For abstract classes/interfaces, the polymorphic parser or a custom parser should handle it.
+      // Throwing here prevents generation of invalid direct instantiation code.
+      methodBuilder.addStatement("throw new $T($S + $T.class.getName() + $S)",
+          UnsupportedOperationException.class,
+          "Cannot directly instantiate abstract class or interface ",
+          targetClass,
+          ". Use @JsonTypeInfo or a custom parser.");
     } else {
       methodBuilder.addStatement("final $T config = new $T()", targetClass, targetClass)
           .addStatement("parse($L, config)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
           .addStatement("return config");
     }
+
+    return methodBuilder.build();
+  }
+
+  // New method for polymorphic base class main parse method
+  private static MethodSpec createPolymorphicObjectParseMethod(Class<?> targetClass, String parserPackage) {
+    final ClassName targetClassName = ClassName.get(targetClass); // Base class type
+    final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+        .returns(targetClassName) // Returns the base type
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, Modifier.FINAL);
+
+    methodBuilder.beginControlFlow("if ($L == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
+        .addStatement("return null")
+        .endControlFlow();
+
+    String discriminatorProperty = getDiscriminatorProperty(targetClass);
+
+    // Generate the combined has/isNull check and specific error message from expected parser
+    methodBuilder.beginControlFlow("if (!$L.has($S) || $L.isNull($S))",
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME, discriminatorProperty,
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME, discriminatorProperty)
+        .addStatement("throw new $T($S)", RuntimeException.class,
+            "Expected string for type discriminator field '" + discriminatorProperty + "', got different type") // Match expected message
+        .endControlFlow();
+
+    // Get the typeName *after* the combined check
+    methodBuilder.addStatement("final $T typeName = $L.getString($S)", String.class, ParserCommonUtils.BASE_OBJECT_PARAM_NAME, discriminatorProperty);
+
+    // Remove the subsequent null/empty check on typeName as it's not in the expected parser
+
+    // Add switch statement
+    methodBuilder.beginControlFlow("switch (typeName)");
+    JsonSubTypes subTypes = targetClass.getAnnotation(JsonSubTypes.class);
+    for (JsonSubTypes.Type subType : subTypes.value()) {
+      String caseName = subType.name();
+      Class<?> subTypeValue = subType.value();
+      ClassName subTypeParserName = determineParserClassName(subTypeValue, parserPackage); // Use helper to get parser name
+      methodBuilder.addCode("case $S:\n", caseName);
+      // Delegate to the static parse method of the subtype parser
+      methodBuilder.addStatement("  return $T.parse($L)", subTypeParserName, ParserCommonUtils.BASE_OBJECT_PARAM_NAME);
+    }
+    // Default case for unknown type name
+    methodBuilder.addCode("default:\n");
+    methodBuilder.addStatement("  throw new $T($S + typeName + $S)", RuntimeException.class, "Unknown type name '",
+        "' for " + targetClass.getSimpleName());
+    methodBuilder.endControlFlow(); // End switch
 
     return methodBuilder.build();
   }
@@ -279,7 +337,7 @@ public final class ParserWriterUtils {
         .addParameter(ParserCommonUtils.getJSONObjectHandle(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, Modifier.FINAL)
         .addParameter(targetClassName, "config", Modifier.FINAL);
 
-    methodBuilder.beginControlFlow("if ($L == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
+    methodBuilder.beginControlFlow("if ($L == null || config == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME) // Added check for config != null
         .addStatement("return")
         .endControlFlow();
 
@@ -375,5 +433,34 @@ public final class ParserWriterUtils {
     // Alternatively, throw an exception:
     // throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
     return placeholderVar;
+  }
+
+  // Helper to check for Polymorphic Base Class annotations
+  private static boolean isPolymorphicBase(Class<?> clazz) {
+    JsonTypeInfo typeInfo = clazz.getAnnotation(JsonTypeInfo.class);
+    JsonSubTypes subTypes = clazz.getAnnotation(JsonSubTypes.class);
+    // Check for the specific combination we want to handle
+    return typeInfo != null && typeInfo.use() == JsonTypeInfo.Id.NAME && subTypes != null;
+  }
+
+  // Helper to get the discriminator property name
+  private static String getDiscriminatorProperty(Class<?> clazz) {
+    JsonTypeInfo typeInfo = clazz.getAnnotation(JsonTypeInfo.class);
+    if (typeInfo != null) {
+      return typeInfo.property();
+    }
+    return null; // Should not happen if isPolymorphicBase is true
+  }
+
+  // Helper to find the superclass that is the polymorphic base, if any
+  private static Class<?> findPolymorphicSuperclass(Class<?> clazz) {
+    Class<?> superclass = clazz.getSuperclass();
+    while (superclass != null && superclass != Object.class) {
+      if (isPolymorphicBase(superclass)) {
+        return superclass;
+      }
+      superclass = superclass.getSuperclass();
+    }
+    return null;
   }
 }

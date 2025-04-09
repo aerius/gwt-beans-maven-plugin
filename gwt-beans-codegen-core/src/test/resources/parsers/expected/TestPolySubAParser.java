@@ -12,26 +12,26 @@ public class TestPolySubAParser {
     if (jsonText == null) {
       return null;
     }
-    JSONObjectHandle handle = JSONObjectHandle.fromText(jsonText);
-    return parse(handle);
+    return parse(JSONObjectHandle.fromText(jsonText));
   }
 
-  public static TestPolySubA parse(final JSONObjectHandle handle) {
-    if (handle == null) {
+  public static TestPolySubA parse(final JSONObjectHandle baseObj) {
+    if (baseObj == null) {
       return null;
     }
+
     TestPolySubA instance = new TestPolySubA();
-    parse(handle, instance);
+    parse(baseObj, instance);
     return instance;
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestPolySubA config) {
-    if (baseObj == null) {
+    if (baseObj == null || config == null) {
       return;
     }
 
     // Parse fields from parent class (TestPolyBase)
-    TestPolyBaseParser.config(baseObj, config);
+    TestPolyBaseParser.parse(baseObj, config);
 
     // Parse fieldB
     if (baseObj.has("fieldA")) {
