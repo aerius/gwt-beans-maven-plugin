@@ -1,6 +1,5 @@
 package nl.aerius.codegen.test.generated;
 
-
 import javax.annotation.processing.Generated;
 
 import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;

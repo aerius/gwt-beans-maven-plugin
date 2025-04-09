@@ -1,7 +1,6 @@
 package nl.aerius.codegen.analyzer;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -21,7 +20,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.palantir.javapoet.ClassName;
 
 import nl.aerius.codegen.util.FileUtils;
@@ -141,17 +141,17 @@ public class TypeAnalyzer {
       analyzeTypeAndSubtypes(superclass);
     }
 
-    // Find and process subtypes
-    // Commented out to make subclass generation more deliberate
-    /*
-    try (ScanResult scanResult = new ClassGraph()
-        .enableClassInfo()
-        .acceptPackages("nl.aerius", "nl.overheid.aerius")
-        .scan()) {
-      final List<Class<?>> subtypes = scanResult.getSubclasses(type.getName()).loadClasses();
-      subtypes.forEach(this::analyzeTypeAndSubtypes);
+    JsonSubTypes subTypesAnnotation = type.getAnnotation(JsonSubTypes.class);
+    JsonTypeInfo typeInfoAnnotation = type.getAnnotation(JsonTypeInfo.class); // Check presence of base annotation too
+
+    if (subTypesAnnotation != null && typeInfoAnnotation != null) { // Only process if both are present
+      System.out.println("Found @JsonSubTypes on: " + type.getName() + ", analyzing listed subtypes...");
+      for (JsonSubTypes.Type subType : subTypesAnnotation.value()) {
+        Class<?> subTypeValue = subType.value();
+        System.out.println("  - Analyzing subtype: " + subTypeValue.getName());
+        analyzeTypeAndSubtypes(subTypeValue); // Recursive call for the subtype
+      }
     }
-    */
 
     // Always analyze fields, even for types with custom parsers
     // This ensures we discover all types that might need parsers
@@ -161,6 +161,8 @@ public class TypeAnalyzer {
           analyzeField(field);
         } catch (TypeNotPresentException e) {
           skippedTypes.add(e.typeName());
+        } catch (UnsupportedTypeException e) {
+          System.err.println(e.getMessage());
         }
       }
     }
@@ -193,10 +195,7 @@ public class TypeAnalyzer {
     if (type instanceof Class<?>) {
       Class<?> classType = (Class<?>) type;
       if (isUnsupportedType(classType)) {
-        throw new UnsupportedTypeException(
-            classType.getName(),
-            "unknown", // We don't have field name context here
-            Object.class); // We don't have containing class context here
+        throw new UnsupportedTypeException(classType.getName(), "type parameter/element", Object.class);
       }
       analyzeTypeAndSubtypes(classType);
     } else if (type instanceof ParameterizedType) {
@@ -207,6 +206,9 @@ public class TypeAnalyzer {
       }
       // Analyze all type arguments recursively
       for (Type typeArg : paramType.getActualTypeArguments()) {
+        if (typeArg instanceof Class<?> && isUnsupportedType((Class<?>) typeArg)) {
+          throw new UnsupportedTypeException(((Class<?>) typeArg).getName(), "type parameter/element", Object.class);
+        }
         analyzeType(typeArg);
       }
     }
@@ -251,42 +253,6 @@ public class TypeAnalyzer {
       final String className = type.getSimpleName();
       discoveredTypes.add(ClassName.get(packageName, className));
     }
-  }
-
-  /**
-   * Checks if a type is a complex key type (has @JsonKey and @JsonCreator annotations).
-   * These types are used as map keys and don't need their own parser.
-   * 
-   * @param type The type to check
-   * @return true if the type is a complex key type, false otherwise
-   */
-  private boolean isComplexKeyType(Class<?> type) {
-    try {
-      boolean hasJsonCreator = false;
-      boolean hasFromStringValue = false;
-      
-      // Check if the class has a method annotated with @JsonKey
-      for (Method method : type.getMethods()) {
-        if (method.isAnnotationPresent(JsonCreator.class)) {
-          hasJsonCreator = true;
-        }
-        if (method.getName().equals("fromStringValue") &&
-            method.getParameterCount() == 1 &&
-            method.getParameterTypes()[0].equals(String.class) &&
-            Modifier.isStatic(method.getModifiers())) {
-          hasFromStringValue = true;
-        }
-        
-        // If we found either JsonCreator or fromStringValue, it's a complex key type
-        if (hasJsonCreator || hasFromStringValue) {
-          return true;
-        }
-      }
-    } catch (Exception e) {
-      // If we can't check the annotations, assume it's not a complex key type
-      return false;
-    }
-    return false;
   }
 
   private boolean hasCustomParser(final Class<?> type) {

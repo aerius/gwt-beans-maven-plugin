@@ -12,6 +12,7 @@ public class TestPolySubAParser {
     if (jsonText == null) {
       return null;
     }
+
     return parse(JSONObjectHandle.fromText(jsonText));
   }
 
@@ -20,9 +21,9 @@ public class TestPolySubAParser {
       return null;
     }
 
-    TestPolySubA instance = new TestPolySubA();
-    parse(baseObj, instance);
-    return instance;
+    final TestPolySubA config = new TestPolySubA();
+    parse(baseObj, config);
+    return config;
   }
 
   public static void parse(final JSONObjectHandle baseObj, final TestPolySubA config) {
@@ -33,7 +34,7 @@ public class TestPolySubAParser {
     // Parse fields from parent class (TestPolyBase)
     TestPolyBaseParser.parse(baseObj, config);
 
-    // Parse fieldB
+    // Parse fieldA
     if (baseObj.has("fieldA")) {
       final int value = baseObj.getInteger("fieldA");
       config.setFieldA(value);
