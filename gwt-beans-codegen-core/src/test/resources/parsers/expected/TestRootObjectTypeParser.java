@@ -14,6 +14,7 @@ import nl.aerius.codegen.test.types.TestNestedMapType;
 import nl.aerius.codegen.test.types.TestRootObjectType;
 import nl.aerius.codegen.test.types.TestSimpleCollectionType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
+import nl.aerius.codegen.test.types.polymorphic.TestPolyBase;
 import nl.aerius.json.JSONObjectHandle;
 
 @Generated(value = "nl.aerius.codegen.ParserGenerator", date = "2024-01-01T00:00:00")
@@ -111,6 +112,12 @@ public class TestRootObjectTypeParser {
     if (baseObj.has("nestedMapType") && !baseObj.isNull("nestedMapType")) {
       final TestNestedMapType value = TestNestedMapTypeParser.parse(baseObj.getObject("nestedMapType"));
       config.setNestedMapType(value);
+    }
+
+    // Parse testPolyBase
+    if (baseObj.has("testPolyBase") && !baseObj.isNull("testPolyBase")) {
+      final TestPolyBase value = TestPolyBaseParser.parse(baseObj.getObject("testPolyBase"));
+      config.setTestPolyBase(value);
     }
   }
 }

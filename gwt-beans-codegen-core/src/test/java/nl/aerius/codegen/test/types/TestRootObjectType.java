@@ -2,6 +2,9 @@ package nl.aerius.codegen.test.types;
 
 import java.util.Map;
 
+import nl.aerius.codegen.test.types.polymorphic.TestPolyBase;
+import nl.aerius.codegen.test.types.polymorphic.TestPolySubA;
+
 public class TestRootObjectType {
   private String foo;
   private int count;
@@ -16,6 +19,8 @@ public class TestRootObjectType {
   private TestEnumListType enumListType;
   private ConcreteType concreteType;
   private TestNestedMapType nestedMapType;
+
+  private TestPolyBase testPolyBase;
 
   public String getFoo() {
     return foo;
@@ -113,6 +118,14 @@ public class TestRootObjectType {
     this.nestedMapType = nestedMapType;
   }
 
+  public TestPolyBase getTestPolyBase() {
+    return testPolyBase;
+  }
+
+  public void setTestPolyBase(TestPolyBase testPolyBase) {
+    this.testPolyBase = testPolyBase;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -127,6 +140,7 @@ public class TestRootObjectType {
     obj.setEnumListType(TestEnumListType.createFullObject());
     obj.setConcreteType(ConcreteType.createFullObject());
     obj.setNestedMapType(TestNestedMapType.createFullObject());
+    obj.setTestPolyBase(new TestPolySubA("BaseValueA", 123));
     return obj;
   }
 
@@ -169,6 +183,7 @@ public class TestRootObjectType {
     obj.setEnumListType(null);
     obj.setConcreteType(null);
     obj.setNestedMapType(null);
+    obj.setTestPolyBase(null);
     return obj;
   }
 }
