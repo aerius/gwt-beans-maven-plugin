@@ -45,6 +45,27 @@
     </dependencies>
   </dependencyManagement>
 
+  <repositories>
+    <repository>
+      <id>aerius-nexus-public</id>
+      <name>AERIUS Nexus repository</name>
+      <url>https://nexus.aerius.nl/repository/maven-public/</url>
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+      </snapshots>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>aerius-nexus-public</id>
+      <name>AERIUS Nexus Repository</name>
+      <url>https://nexus.aerius.nl/repository/maven-public/</url>
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
   <build>
     <pluginManagement>
       <plugins>
