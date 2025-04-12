@@ -158,11 +158,10 @@ public class TypeAnalyzer {
     for (Field field : type.getDeclaredFields()) {
       if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
         try {
-          analyzeField(field);
+          System.out.println("Analyzing field: " + field.getName() + " of type: " + field.getType().getName()); // Keep this debug line for now
+          analyzeField(field); // Let UnsupportedTypeException propagate
         } catch (TypeNotPresentException e) {
           skippedTypes.add(e.typeName());
-        } catch (UnsupportedTypeException e) {
-          System.err.println(e.getMessage());
         }
       }
     }
@@ -221,7 +220,8 @@ public class TypeAnalyzer {
    * @return true if the type is unsupported, false otherwise
    */
   private boolean isUnsupportedType(Class<?> type) {
-    return unsupportedTypes.contains(type);
+    return unsupportedTypes.stream()
+        .anyMatch(unsupported -> unsupported.getName().equals(type.getName()));
   }
 
   private boolean shouldAnalyzeType(final Class<?> type) {
