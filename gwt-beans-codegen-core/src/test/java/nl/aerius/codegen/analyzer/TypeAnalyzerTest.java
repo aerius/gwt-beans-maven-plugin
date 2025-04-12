@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,7 +68,7 @@ class TypeAnalyzerTest {
   }
 
   private static class UnsupportedTypeTestClass {
-    private java.time.LocalDate unsupportedField;
+    private LocalDate unsupportedField;
   }
 
   private static class CustomParserType {
