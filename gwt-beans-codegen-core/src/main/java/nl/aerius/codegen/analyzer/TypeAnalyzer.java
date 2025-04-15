@@ -158,8 +158,7 @@ public class TypeAnalyzer {
     for (Field field : type.getDeclaredFields()) {
       if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
         try {
-          System.out.println("Analyzing field: " + field.getName() + " of type: " + field.getType().getName()); // Keep this debug line for now
-          analyzeField(field); // Let UnsupportedTypeException propagate
+          analyzeField(field);
         } catch (TypeNotPresentException e) {
           skippedTypes.add(e.typeName());
         }
