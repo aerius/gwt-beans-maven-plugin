@@ -133,7 +133,7 @@ echo "Building target project to ensure classes are available..."
 echo "Getting dependency classpath from target project..."
 # Get both the project's classes and its dependencies
 TARGET_CP="$PROJECT_DIR/target/classes"
-DEP_CP=$(cd "$PROJECT_DIR" && mvn dependency:build-classpath -q -DincludeScope=compile -Dmdep.outputFile=/dev/stdout)
+DEP_CP=$(cd "$PROJECT_DIR" && mvn dependency:build-classpath -U -q -DincludeScope=compile -Dmdep.outputFile=/dev/stdout)
 FULL_CP="$TARGET_CP:$DEP_CP"
 
 echo "Debug: Using classpath: $FULL_CP"
@@ -157,4 +157,4 @@ echo "Debug: Passing system properties: -Dgenerator.version='$GENERATOR_VERSION'
 java -Dgenerator.version="$GENERATOR_VERSION" -Dgenerator.githash="$GENERATOR_GIT_HASH" -cp "$FULL_CP:$GENERATOR_JAR" nl.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
 # --- End Modified java command ---
 
-echo "Parser generation completed successfully!" 
+echo "Parser generation completed successfully!"
