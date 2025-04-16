@@ -99,12 +99,23 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.3</version>
         <configuration>
+          <!--
+            Tests MUST run sequentially and without reused forks.
+            Parallel execution (e.g., <parallel>classes</parallel>, <forkCount>>1, <reuseForks>true)
+            caused inconsistent test failures (specifically in TypeAnalyzerTest related to classloading 
+            and exception handling) between local and CI environments.
+            These settings ensure consistent behavior.
+          -->
+          <parallel>none</parallel>
+          <threadCount>1</threadCount>
+          <perCoreThreadCount>false</perCoreThreadCount>
+          <useUnlimitedThreads>false</useUnlimitedThreads>
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
           <includes>
             <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
           </includes>
-          <systemPropertyVariables>
-            <java.io.tmpdir>${project.build.directory}/test-tmp</java.io.tmpdir>
-          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
