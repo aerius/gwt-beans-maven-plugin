@@ -33,18 +33,14 @@ public class TestPrimitiveArrayTypeParser {
       return;
     }
 
-    System.out.println("baseObj: " + baseObj);
-
     // Parse stringArray
     if (baseObj.has("stringArray") && !baseObj.isNull("stringArray")) {
       String[] array = null;
-      if (baseObj.has("stringArray") && !baseObj.isNull("stringArray")) {
-        final JSONArrayHandle jsonArray = baseObj.getArray("stringArray");
-        if (jsonArray != null) {
-          final List<String> tempList = new ArrayList<>();
-          jsonArray.forEachString(tempList::add);
-          array = tempList.toArray((String[]) Array.newInstance(String.class, 0));
-        }
+      final JSONArrayHandle jsonArray = baseObj.getArray("stringArray");
+      if (jsonArray != null) {
+        final List<String> tempList = new ArrayList<>();
+        jsonArray.forEachString(tempList::add);
+        array = tempList.toArray(new String[0]);
       }
       config.setStringArray(array);
     }
@@ -52,13 +48,11 @@ public class TestPrimitiveArrayTypeParser {
     // Parse intArray
     if (baseObj.has("intArray") && !baseObj.isNull("intArray")) {
       int[] array = null;
-      if (baseObj.has("intArray") && !baseObj.isNull("intArray")) {
-        final JSONArrayHandle jsonArray = baseObj.getArray("intArray");
-        if (jsonArray != null) {
-          final List<Integer> tempList = new ArrayList<>();
-          jsonArray.forEachInteger(tempList::add);
-          array = tempList.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray();
-        }
+      final JSONArrayHandle jsonArray = baseObj.getArray("intArray");
+      if (jsonArray != null) {
+        final List<Integer> tempList = new ArrayList<>();
+        jsonArray.forEachInteger(tempList::add);
+        array = tempList.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray();
       }
       config.setIntArray(array);
     }
@@ -66,13 +60,11 @@ public class TestPrimitiveArrayTypeParser {
     // Parse integerArray
     if (baseObj.has("integerArray") && !baseObj.isNull("integerArray")) {
       Integer[] array = null;
-      if (baseObj.has("integerArray") && !baseObj.isNull("integerArray")) {
-        final JSONArrayHandle jsonArray = baseObj.getArray("integerArray");
-        if (jsonArray != null) {
-          final List<Integer> tempList = new ArrayList<>();
-          jsonArray.forEachInteger(tempList::add);
-          array = tempList.toArray((Integer[]) Array.newInstance(Integer.class, 0));
-        }
+      final JSONArrayHandle jsonArray = baseObj.getArray("integerArray");
+      if (jsonArray != null) {
+        final List<Integer> tempList = new ArrayList<>();
+        jsonArray.forEachInteger(tempList::add);
+        array = tempList.toArray(new Integer[0]);
       }
       config.setIntegerArray(array);
     }
@@ -80,13 +72,11 @@ public class TestPrimitiveArrayTypeParser {
     // Parse doubleArray
     if (baseObj.has("doubleArray") && !baseObj.isNull("doubleArray")) {
       double[] array = null;
-      if (baseObj.has("doubleArray") && !baseObj.isNull("doubleArray")) {
-        final JSONArrayHandle jsonArray = baseObj.getArray("doubleArray");
-        if (jsonArray != null) {
-          final List<Double> tempList = new ArrayList<>();
-          jsonArray.forEachNumber(tempList::add);
-          array = tempList.stream().mapToDouble(d -> d != null ? d.doubleValue() : 0.0).toArray();
-        }
+      final JSONArrayHandle jsonArray = baseObj.getArray("doubleArray");
+      if (jsonArray != null) {
+        final List<Double> tempList = new ArrayList<>();
+        jsonArray.forEachNumber(tempList::add);
+        array = tempList.stream().mapToDouble(d -> d != null ? d.doubleValue() : 0.0).toArray();
       }
       config.setDoubleArray(array);
     }
@@ -94,14 +84,13 @@ public class TestPrimitiveArrayTypeParser {
     // Parse numberArray
     if (baseObj.has("numberArray") && !baseObj.isNull("numberArray")) {
       Double[] array = null;
-      if (baseObj.has("numberArray") && !baseObj.isNull("numberArray")) {
-        final JSONArrayHandle jsonArray = baseObj.getArray("numberArray");
-        if (jsonArray != null) {
-          final List<Double> tempList = new ArrayList<>();
-          jsonArray.forEachNumber(tempList::add);
-          array = tempList.toArray((Double[]) Array.newInstance(Double.class, 0));
-        }
+      final JSONArrayHandle jsonArray = baseObj.getArray("numberArray");
+      if (jsonArray != null) {
+        final List<Double> tempList = new ArrayList<>();
+        jsonArray.forEachNumber(tempList::add);
+        array = tempList.toArray(new Double[0]);
       }
       config.setNumberArray(array);
+    }
   }
 }
