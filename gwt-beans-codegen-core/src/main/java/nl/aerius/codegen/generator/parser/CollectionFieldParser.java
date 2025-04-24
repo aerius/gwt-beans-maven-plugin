@@ -42,8 +42,22 @@ public class CollectionFieldParser implements TypeParser {
   public boolean canHandle(Type type) {
     if (type instanceof Class<?>) {
       Class<?> clazz = (Class<?>) type;
-      // Handle Object arrays (e.g., String[], CustomObject[])
-      return clazz.isArray() && !clazz.getComponentType().isPrimitive();
+      if (!clazz.isArray()) {
+        return false; // Only interested in arrays here
+      }
+      Class<?> componentType = clazz.getComponentType();
+      // Exclude primitive arrays AND common wrapper/String arrays
+      return !componentType.isPrimitive() &&
+          !componentType.equals(String.class) &&
+          !componentType.equals(Integer.class) &&
+          !componentType.equals(Long.class) && // Consider Long as well
+          !componentType.equals(Double.class) &&
+          !componentType.equals(Float.class) && // Consider Float
+          !componentType.equals(Boolean.class) &&
+          !componentType.equals(Byte.class) && // Consider Byte
+          !componentType.equals(Short.class) && // Consider Short
+          !componentType.equals(Character.class); // Consider Character
+      // This leaves arrays of custom objects (e.g., MyType[])
     }
     if (type instanceof ParameterizedType) {
       ParameterizedType paramType = (ParameterizedType) type;
@@ -54,7 +68,7 @@ public class CollectionFieldParser implements TypeParser {
       return Collection.class.isAssignableFrom((Class<?>) paramType.getRawType());
     }
     if (type instanceof java.lang.reflect.GenericArrayType) {
-      // Handle generic arrays like T[] where T might be complex later
+      // Handle generic arrays like T[]
       return true;
     }
     return false;

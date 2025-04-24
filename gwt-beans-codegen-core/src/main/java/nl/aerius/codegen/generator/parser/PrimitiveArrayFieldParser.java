@@ -2,8 +2,6 @@ package nl.aerius.codegen.generator.parser;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
@@ -11,13 +9,13 @@ import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
 
 /**
- * Parser for primitive array fields (int[], byte[], etc.).
+ * Parser for primitive and wrapper array fields (String[], int[], Integer[], double[], Double[]).
  */
 public class PrimitiveArrayFieldParser implements TypeParser {
   private static final ClassName LIST = ClassName.get("java.util", "List");
 
   // Map primitive component types to the specific getter method on JSONArrayHandle
-  private static final Map<Class<?>, String> PRIMITIVE_COMPONENT_TO_GETTER = new HashMap<>();
+  private static final java.util.Map<Class<?>, String> PRIMITIVE_COMPONENT_TO_GETTER = new java.util.HashMap<>();
 
   static {
     // Assumes JSONArrayHandle has methods like getStringArray(), getIntegerArray() etc.
@@ -43,9 +41,15 @@ public class PrimitiveArrayFieldParser implements TypeParser {
       return false;
     }
     Class<?> clazz = (Class<?>) type;
-    return clazz.isArray() && PRIMITIVE_COMPONENT_TO_GETTER.containsKey(clazz.getComponentType());
-    // Only handle primitives with direct getters for simplicity now.
-    // return clazz.isArray() && clazz.getComponentType().isPrimitive();
+    if (!clazz.isArray()) {
+      return false;
+    }
+    Class<?> componentType = clazz.getComponentType();
+    // Check for supported component types (primitive or wrapper or String)
+    // EXCLUDING boolean/Boolean
+    return componentType.equals(String.class) ||
+        componentType.equals(int.class) || componentType.equals(Integer.class) ||
+        componentType.equals(double.class) || componentType.equals(Double.class);
   }
 
   @Override
@@ -108,9 +112,30 @@ public class PrimitiveArrayFieldParser implements TypeParser {
       throw new IllegalArgumentException("PrimitiveArrayFieldParser cannot handle type: " + type.getTypeName());
     }
 
+    // --- Extract simple field name from accessExpression (Still needed) --- 
+    String accessExpressionString = accessExpression.toString();
+    String fieldNameString = "";
+    int lastQuote = accessExpressionString.lastIndexOf('"');
+    int secondLastQuote = accessExpressionString.lastIndexOf('"', lastQuote - 1);
+    if (lastQuote > secondLastQuote && secondLastQuote != -1) {
+        fieldNameString = accessExpressionString.substring(secondLastQuote + 1, lastQuote);
+    } else {
+       // Fallback: Assume accessExpression might just be the string literal if extraction fails
+       // This handles cases where the accessExpression was already simplified
+       String simpleAccess = accessExpression.toString().replace("\"", "");
+       if (simpleAccess.matches("^[a-zA-Z0-9_]+$")) { // Basic check for valid field name
+           fieldNameString = simpleAccess;
+       } else {
+           code.addStatement("// ERROR: Could not extract field name from access expression: $L", accessExpression);
+           fieldNameString = "extractedFieldNameError";
+       }
+    }
+    CodeBlock fieldNameCodeBlock = CodeBlock.of("$S", fieldNameString);
+    // --- End field name extraction ---
+
     Class<?> arrayType = (Class<?>) type;
     Class<?> componentType = arrayType.getComponentType();
-    TypeName declarationTypeName = TypeName.get(fieldType);
+    TypeName declarationTypeName = TypeName.get(fieldType); // The final array type (e.g., String[], int[])
     String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
 
     // Declare the final result array variable (initialized to null)
@@ -118,84 +143,59 @@ public class PrimitiveArrayFieldParser implements TypeParser {
 
     // Add check for field existence and non-null array
     code.beginControlFlow("if ($L.has($L) && !$L.isNull($L))",
-        objVarName, accessExpression, objVarName, accessExpression);
+        objVarName, fieldNameCodeBlock, objVarName, fieldNameCodeBlock);
 
-    // Handle String, Integer, Double using getXyzArray and List conversion
-    if (componentType.equals(String.class) || componentType.equals(Integer.class) || componentType.equals(Double.class)
-        || componentType.equals(int.class) || componentType.equals(double.class)) {
-      // ... (logic for String/Int/Double using getXyzArray and List conversion - should be correct from before) ...
-      String getterMethodName;
-      TypeName listItemTypeName;
-      if (componentType.equals(String.class)) {
-        getterMethodName = "getStringArray";
-        listItemTypeName = ClassName.get(String.class);
-      } else if (componentType.equals(int.class) || componentType.equals(Integer.class)) {
-        getterMethodName = "getIntegerArray";
-        listItemTypeName = ClassName.get(Integer.class);
-      } else { // double or Double
-        getterMethodName = "getNumberArray";
-        listItemTypeName = ClassName.get(Double.class);
-      }
+    // Determine the JSONArrayHandle forEach method and temporary List type
+    String forEachMethodName;
+    Class<?> wrapperType;
+    if (componentType.equals(String.class)) {
+        forEachMethodName = "forEachString";
+        wrapperType = String.class;
+    } else if (componentType.equals(int.class) || componentType.equals(Integer.class)) {
+        forEachMethodName = "forEachInteger";
+        wrapperType = Integer.class;
+    } else if (componentType.equals(double.class) || componentType.equals(Double.class)) {
+        forEachMethodName = "forEachNumber";
+        wrapperType = Double.class;
+    } else {
+        // Should not happen due to canHandle
+        code.addStatement("// Should not happen: Unsupported array type in generate: $T", componentType);
+        code.endControlFlow();
+        return resultVarName; 
+    }
 
-      String listVarName = ParserCommonUtils.getVariableNameForLevel(level, "List");
-      ClassName listClassName = ClassName.get(java.util.List.class);
-      TypeName listOfItemType = ParameterizedTypeName.get(listClassName, listItemTypeName.box());
+    String jsonArrayVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
+    String listVarName = ParserCommonUtils.getVariableNameForLevel(level, "TempList");
+    ClassName jsonArrayHandleName = ClassName.get("nl.aerius.json", "JSONArrayHandle");
+    ClassName arrayListName = ClassName.get(java.util.ArrayList.class);
+    TypeName wrapperListName = ParameterizedTypeName.get(ClassName.get(java.util.List.class), ClassName.get(wrapperType));
 
-      code.addStatement("final $T $L = $L.$L($L)",
-          listOfItemType, listVarName, objVarName, getterMethodName, accessExpression);
+    // 1. Get JSONArrayHandle
+    code.addStatement("final $T $L = $L.getArray($L)", jsonArrayHandleName, jsonArrayVar, objVarName, fieldNameCodeBlock);
 
-      code.beginControlFlow("if ($L != null)", listVarName);
-      if (componentType.isPrimitive()) {
+    // 2. Create temporary List and populate using forEachXyz
+    code.beginControlFlow("if ($L != null)", jsonArrayVar);
+    code.addStatement("final $T $L = new $T<>()", wrapperListName, listVarName, arrayListName);
+    code.addStatement("$L.$L($L::add)", jsonArrayVar, forEachMethodName, listVarName);
+
+    // 3. Convert temporary List to final target array
+    if (componentType.isPrimitive()) {
+        // Primitive array conversion (int[], double[])
         if (componentType.equals(int.class)) {
-          code.addStatement("$L = $L.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray()",
-              resultVarName, listVarName);
+            code.addStatement("$L = $L.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray()",
+                resultVarName, listVarName);
         } else if (componentType.equals(double.class)) {
-          code.addStatement("$L = $L.stream().mapToDouble(d -> d != null ? d.doubleValue() : 0.0).toArray()",
-              resultVarName, listVarName);
+            code.addStatement("$L = $L.stream().mapToDouble(d -> d != null ? d.doubleValue() : 0.0).toArray()",
+                resultVarName, listVarName);
         }
-      } else {
+        // Add boolean[] here if/when forEachBoolean is reliably available
+    } else {
+        // Wrapper/String array conversion (String[], Integer[], Double[])
         code.addStatement("$L = $L.toArray(($T) $T.newInstance($T.class, 0))",
             resultVarName, listVarName, declarationTypeName, java.lang.reflect.Array.class, componentType);
-      }
-      code.endControlFlow(); // End if (listVar != null)
-
-    } else if (componentType.equals(boolean.class) || componentType.equals(Boolean.class)) {
-      // GENERATE code using forEachString and manual conversion
-      String jsonArrayVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArrayHandle");
-      String stringListVar = ParserCommonUtils.getVariableNameForLevel(level, "StringList");
-      ClassName jsonArrayHandleName = ClassName.get("nl.aerius.json", "JSONArrayHandle");
-      ClassName arrayListName = ClassName.get(java.util.ArrayList.class);
-      TypeName stringListName = ParameterizedTypeName.get(ClassName.get(java.util.List.class), ClassName.get(String.class));
-
-      code.addStatement("final $T $L = $L.getArray($L)", jsonArrayHandleName, jsonArrayVar, objVarName, accessExpression);
-      code.beginControlFlow("if ($L != null)", jsonArrayVar);
-      code.addStatement("final $T $L = new $T<>()", stringListName, stringListVar, arrayListName);
-      code.addStatement("$L.forEachString(s -> $L.add(s))", jsonArrayVar, stringListVar);
-      code.addStatement("$L = new $T[$L.size()]", resultVarName, componentType, stringListVar);
-      code.beginControlFlow("for (int i = 0; i < $L.size(); i++)", stringListVar);
-      code.addStatement("String str = $L.get(i)", stringListVar);
-      if (componentType.isPrimitive()) {
-        // Default null/invalid strings to false
-        code.addStatement("$L[i] = $S.equalsIgnoreCase(str)", resultVarName, "true");
-      } else {
-        // Handle wrapper Boolean[] - map null strings to null, invalid strings to null
-        code.beginControlFlow("if (str == null)")
-            .addStatement("$L[i] = null", resultVarName)
-            .nextControlFlow("else if ($S.equalsIgnoreCase(str))", "true")
-            .addStatement("$L[i] = $T.TRUE", resultVarName, Boolean.class)
-            .nextControlFlow("else if ($S.equalsIgnoreCase(str))", "false")
-            .addStatement("$L[i] = $T.FALSE", resultVarName, Boolean.class)
-            .nextControlFlow("else")
-            .addStatement("$L[i] = null", resultVarName) // Or Boolean.FALSE? Defaulting to null.
-            .endControlFlow();
-      }
-      code.endControlFlow(); // End for loop
-      code.endControlFlow(); // End if (jsonArrayVar != null)
-
-    } else {
-      // Should not happen due to canHandle check
-      code.addStatement("// Unsupported array type: $T", componentType);
     }
+    code.endControlFlow(); // End if (jsonArrayVar != null)
+
     code.endControlFlow(); // End if (baseObj.has(...) && !baseObj.isNull(...))
 
     return resultVarName;
