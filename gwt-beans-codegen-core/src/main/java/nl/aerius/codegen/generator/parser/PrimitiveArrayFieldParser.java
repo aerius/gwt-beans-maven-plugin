@@ -7,6 +7,8 @@ import java.util.Map;
 
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
 
 /**
  * Parser for primitive array fields (int[], byte[], etc.).
@@ -105,18 +107,97 @@ public class PrimitiveArrayFieldParser implements TypeParser {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("PrimitiveArrayFieldParser cannot handle type: " + type.getTypeName());
     }
-    // fieldType not needed for declaration, use runtime type
+
     Class<?> arrayType = (Class<?>) type;
     Class<?> componentType = arrayType.getComponentType();
+    TypeName declarationTypeName = TypeName.get(fieldType);
     String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
-    String getterMethod = PRIMITIVE_COMPONENT_TO_GETTER.get(componentType);
 
-    if (getterMethod == null) {
-      // Fallback or error for unsupported primitive array types
-      code.addStatement("$T[] $L = null; // Unsupported primitive array type", componentType, resultVarName);
+    // Declare the final result array variable (initialized to null)
+    code.addStatement("$T $L = null", declarationTypeName, resultVarName);
+
+    // Add check for field existence and non-null array
+    code.beginControlFlow("if ($L.has($L) && !$L.isNull($L))",
+        objVarName, accessExpression, objVarName, accessExpression);
+
+    // Handle String, Integer, Double using getXyzArray and List conversion
+    if (componentType.equals(String.class) || componentType.equals(Integer.class) || componentType.equals(Double.class)
+        || componentType.equals(int.class) || componentType.equals(double.class)) {
+      // ... (logic for String/Int/Double using getXyzArray and List conversion - should be correct from before) ...
+      String getterMethodName;
+      TypeName listItemTypeName;
+      if (componentType.equals(String.class)) {
+        getterMethodName = "getStringArray";
+        listItemTypeName = ClassName.get(String.class);
+      } else if (componentType.equals(int.class) || componentType.equals(Integer.class)) {
+        getterMethodName = "getIntegerArray";
+        listItemTypeName = ClassName.get(Integer.class);
+      } else { // double or Double
+        getterMethodName = "getNumberArray";
+        listItemTypeName = ClassName.get(Double.class);
+      }
+
+      String listVarName = ParserCommonUtils.getVariableNameForLevel(level, "List");
+      ClassName listClassName = ClassName.get(java.util.List.class);
+      TypeName listOfItemType = ParameterizedTypeName.get(listClassName, listItemTypeName.box());
+
+      code.addStatement("final $T $L = $L.$L($L)",
+          listOfItemType, listVarName, objVarName, getterMethodName, accessExpression);
+
+      code.beginControlFlow("if ($L != null)", listVarName);
+      if (componentType.isPrimitive()) {
+        if (componentType.equals(int.class)) {
+          code.addStatement("$L = $L.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray()",
+              resultVarName, listVarName);
+        } else if (componentType.equals(double.class)) {
+          code.addStatement("$L = $L.stream().mapToDouble(d -> d != null ? d.doubleValue() : 0.0).toArray()",
+              resultVarName, listVarName);
+        }
+      } else {
+        code.addStatement("$L = $L.toArray(($T) $T.newInstance($T.class, 0))",
+            resultVarName, listVarName, declarationTypeName, java.lang.reflect.Array.class, componentType);
+      }
+      code.endControlFlow(); // End if (listVar != null)
+
+    } else if (componentType.equals(boolean.class) || componentType.equals(Boolean.class)) {
+      // GENERATE code using forEachString and manual conversion
+      String jsonArrayVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArrayHandle");
+      String stringListVar = ParserCommonUtils.getVariableNameForLevel(level, "StringList");
+      ClassName jsonArrayHandleName = ClassName.get("nl.aerius.json", "JSONArrayHandle");
+      ClassName arrayListName = ClassName.get(java.util.ArrayList.class);
+      TypeName stringListName = ParameterizedTypeName.get(ClassName.get(java.util.List.class), ClassName.get(String.class));
+
+      code.addStatement("final $T $L = $L.getArray($L)", jsonArrayHandleName, jsonArrayVar, objVarName, accessExpression);
+      code.beginControlFlow("if ($L != null)", jsonArrayVar);
+      code.addStatement("final $T $L = new $T<>()", stringListName, stringListVar, arrayListName);
+      code.addStatement("$L.forEachString(s -> $L.add(s))", jsonArrayVar, stringListVar);
+      code.addStatement("$L = new $T[$L.size()]", resultVarName, componentType, stringListVar);
+      code.beginControlFlow("for (int i = 0; i < $L.size(); i++)", stringListVar);
+      code.addStatement("String str = $L.get(i)", stringListVar);
+      if (componentType.isPrimitive()) {
+        // Default null/invalid strings to false
+        code.addStatement("$L[i] = $S.equalsIgnoreCase(str)", resultVarName, "true");
+      } else {
+        // Handle wrapper Boolean[] - map null strings to null, invalid strings to null
+        code.beginControlFlow("if (str == null)")
+            .addStatement("$L[i] = null", resultVarName)
+            .nextControlFlow("else if ($S.equalsIgnoreCase(str))", "true")
+            .addStatement("$L[i] = $T.TRUE", resultVarName, Boolean.class)
+            .nextControlFlow("else if ($S.equalsIgnoreCase(str))", "false")
+            .addStatement("$L[i] = $T.FALSE", resultVarName, Boolean.class)
+            .nextControlFlow("else")
+            .addStatement("$L[i] = null", resultVarName) // Or Boolean.FALSE? Defaulting to null.
+            .endControlFlow();
+      }
+      code.endControlFlow(); // End for loop
+      code.endControlFlow(); // End if (jsonArrayVar != null)
+
     } else {
-      code.addStatement("final $T[] $L = $L.$L($L)", componentType, resultVarName, objVarName, getterMethod, accessExpression);
+      // Should not happen due to canHandle check
+      code.addStatement("// Unsupported array type: $T", componentType);
     }
+    code.endControlFlow(); // End if (baseObj.has(...) && !baseObj.isNull(...))
+
     return resultVarName;
   }
 }

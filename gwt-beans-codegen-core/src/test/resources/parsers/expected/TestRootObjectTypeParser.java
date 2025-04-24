@@ -10,6 +10,7 @@ import nl.aerius.codegen.test.types.TestCustomParserType;
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
 import nl.aerius.codegen.test.types.TestNestedMapType;
+import nl.aerius.codegen.test.types.TestPrimitiveArrayType;
 import nl.aerius.codegen.test.types.TestRootObjectType;
 import nl.aerius.codegen.test.types.TestSimpleCollectionType;
 import nl.aerius.codegen.test.types.TestSimpleTypesType;
@@ -117,6 +118,12 @@ public class TestRootObjectTypeParser {
     if (baseObj.has("testPolyBase") && !baseObj.isNull("testPolyBase")) {
       final TestPolyBase value = TestPolyBaseParser.parse(baseObj.getObject("testPolyBase"));
       config.setTestPolyBase(value);
+    }
+
+    // Parse primitiveArrayType
+    if (baseObj.has("primitiveArrays") && !baseObj.isNull("primitiveArrays")) {
+      final TestPrimitiveArrayType value = TestPrimitiveArrayTypeParser.parse(baseObj.getObject("primitiveArrays"));
+      config.setPrimitiveArrays(value);
     }
   }
 }

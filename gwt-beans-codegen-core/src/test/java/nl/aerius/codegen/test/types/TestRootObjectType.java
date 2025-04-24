@@ -21,6 +21,7 @@ public class TestRootObjectType {
   private TestNestedMapType nestedMapType;
 
   private TestPolyBase testPolyBase;
+  private TestPrimitiveArrayType primitiveArrays;
 
   public String getFoo() {
     return foo;
@@ -126,6 +127,14 @@ public class TestRootObjectType {
     this.testPolyBase = testPolyBase;
   }
 
+  public TestPrimitiveArrayType getPrimitiveArrays() {
+    return primitiveArrays;
+  }
+
+  public void setPrimitiveArrays(TestPrimitiveArrayType primitiveArrays) {
+    this.primitiveArrays = primitiveArrays;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -141,6 +150,7 @@ public class TestRootObjectType {
     obj.setConcreteType(ConcreteType.createFullObject());
     obj.setNestedMapType(TestNestedMapType.createFullObject());
     obj.setTestPolyBase(new TestPolySubA("BaseValueA", 123));
+    obj.setPrimitiveArrays(TestPrimitiveArrayType.createFullObject());
     return obj;
   }
 
@@ -184,6 +194,7 @@ public class TestRootObjectType {
     obj.setConcreteType(null);
     obj.setNestedMapType(null);
     obj.setTestPolyBase(null);
+    obj.setPrimitiveArrays(null);
     return obj;
   }
 }
