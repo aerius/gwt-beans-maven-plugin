@@ -126,7 +126,7 @@ public class PrimitiveArrayFieldParser implements TypeParser {
 
     String jsonArrayVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
     String listVarName = ParserCommonUtils.getVariableNameForLevel(level, "TempList");
-    ClassName jsonArrayHandleName = ClassName.get("nl.aerius.json", "JSONArrayHandle");
+    ClassName jsonArrayHandleName = ParserCommonUtils.getJSONArrayHandle();
     ClassName arrayListName = ClassName.get(java.util.ArrayList.class);
     TypeName wrapperListName = ParameterizedTypeName.get(ClassName.get(java.util.List.class), ClassName.get(wrapperType));
 
