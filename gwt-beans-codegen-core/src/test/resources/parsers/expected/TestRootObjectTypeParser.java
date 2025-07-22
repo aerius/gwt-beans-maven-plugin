@@ -120,7 +120,7 @@ public class TestRootObjectTypeParser {
       config.setTestPolyBase(value);
     }
 
-    // Parse primitiveArrayType
+    // Parse primitiveArrays
     if (baseObj.has("primitiveArrays") && !baseObj.isNull("primitiveArrays")) {
       final TestPrimitiveArrayType value = TestPrimitiveArrayTypeParser.parse(baseObj.getObject("primitiveArrays"));
       config.setPrimitiveArrays(value);
