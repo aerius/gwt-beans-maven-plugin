@@ -49,6 +49,8 @@ public class ConfigurationValidator {
     if (customParserTypes != null) {
       this.customParserTypes.addAll(customParserTypes);
     }
+    // Also set custom parser types on the TypeAnalyzer instance
+    this.typeAnalyzer.setCustomParserTypes(customParserTypes);
   }
 
   public void addSkippedType(String fullyQualifiedClassName) {
@@ -193,15 +195,21 @@ public class ConfigurationValidator {
     // Flag to track if *this specific class* has any issues (error or warning)
     boolean classHasIssues = false;
 
-    // Check for interfaces without @JsonTypeInfo (honoring treatErrorsAsWarnings)
+    // Check for interfaces without @JsonTypeInfo - this is always an error
     if (clazz.isInterface() && !clazz.isAnnotationPresent(JsonTypeInfo.class)) {
-      String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
-      System.out.println(prefix + " " + clazz.getName() + ": Interface must be annotated with @JsonTypeInfo for polymorphic handling.");
-      if (!treatErrorsAsWarnings) {
-        hasErrors = true; // Set global error flag only if it's not a warning
-      }
-      classHasIssues = true; // Mark this class as having an issue
+      System.out.println(RED_CROSS + " " + clazz.getName() + ": Interface must be annotated with @JsonTypeInfo for polymorphic handling.");
+      hasErrors = true;
+      classHasIssues = true;
       // We don't return here, allowing other checks if applicable, though interfaces have limited other checks.
+    }
+
+    // Check for interfaces with @JsonTypeInfo but without @JsonSubTypes
+    if (clazz.isInterface() && clazz.isAnnotationPresent(JsonTypeInfo.class)
+        && !clazz.isAnnotationPresent(com.fasterxml.jackson.annotation.JsonSubTypes.class)) {
+      System.out.println(RED_CROSS + " " + clazz.getName()
+          + ": Interface with @JsonTypeInfo must also be annotated with @JsonSubTypes to define concrete implementations.");
+      hasErrors = true;
+      classHasIssues = true;
     }
 
     if (clazz.isArray()) {

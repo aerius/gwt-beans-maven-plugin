@@ -186,6 +186,23 @@ public class TypeAnalyzer {
       }
     }
 
+    // Check if the field type contains interfaces - include them for validation
+    if (containsInterface(field.getGenericType())) {
+      String fieldTypeName = field.getGenericType().getTypeName();
+      System.out.println("INFO: Field '" + field.getName() + "' in " + field.getDeclaringClass().getSimpleName() +
+          " contains interface type arguments: " + fieldTypeName);
+      // Don't skip - let validation handle interface requirements
+    }
+
+    // Check if the field type contains wildcards (which will be skipped during parser generation)
+    if (containsWildcard(field.getGenericType())) {
+      String fieldTypeName = field.getGenericType().getTypeName();
+      System.err.println("WARN: Field '" + field.getName() + "' in " + field.getDeclaringClass().getSimpleName() +
+          " contains wildcard type arguments and will be skipped during parser generation: " + fieldTypeName);
+      skippedTypes.add(fieldTypeName);
+      return; // Skip further analysis of this field
+    }
+
     FileUtils.analyzeFieldType(field, this::analyzeType);
   }
 
@@ -223,6 +240,50 @@ public class TypeAnalyzer {
         .anyMatch(unsupported -> unsupported.getName().equals(type.getName()));
   }
 
+  /**
+   * Checks if the given type or its type arguments contain an interface.
+   * Recursively checks parameterized types.
+   * 
+   * @param type The type to check
+   * @return true if the type contains an interface, false otherwise
+   */
+  private boolean containsInterface(Type type) {
+    if (type instanceof Class<?>) {
+      return ((Class<?>) type).isInterface();
+    }
+    if (type instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) type;
+      for (Type arg : pt.getActualTypeArguments()) {
+        if (containsInterface(arg)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Checks if the given type or its type arguments contain a wildcard.
+   * Recursively checks parameterized types.
+   * 
+   * @param type The type to check
+   * @return true if the type contains a wildcard, false otherwise
+   */
+  private boolean containsWildcard(Type type) {
+    if (type instanceof java.lang.reflect.WildcardType) {
+      return true;
+    }
+    if (type instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) type;
+      for (Type arg : pt.getActualTypeArguments()) {
+        if (containsWildcard(arg)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   private boolean shouldAnalyzeType(final Class<?> type) {
     if (type.isArray()) {
       return shouldAnalyzeType(type.getComponentType());
@@ -231,6 +292,7 @@ public class TypeAnalyzer {
         && !primitiveWrappers.contains(type)
         && !type.getName().startsWith("java.")
         && !type.equals(Object.class);
+    // Note: Interfaces are now included for analysis and validation
   }
 
   private void addTypeForGeneration(final Class<?> type) {
@@ -239,6 +301,9 @@ public class TypeAnalyzer {
     if (type.isEnum() || customParserTypes.contains(type.getSimpleName())) {
       return;
     }
+
+    // Include interfaces for validation - they will be checked for @JsonTypeInfo annotations
+    // during the validation phase
 
     if (type.isMemberClass()) {
       final Class<?> enclosingClass = type.getEnclosingClass();

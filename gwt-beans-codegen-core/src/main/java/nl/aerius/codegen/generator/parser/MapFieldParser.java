@@ -34,7 +34,21 @@ public class MapFieldParser implements TypeParser {
     if (!(paramType.getRawType() instanceof Class<?>)) {
       return false;
     }
-    return Map.class.isAssignableFrom((Class<?>) paramType.getRawType());
+    if (!Map.class.isAssignableFrom((Class<?>) paramType.getRawType())) {
+      return false;
+    }
+
+    // Check if the Map contains interfaces or wildcards in its type arguments
+    Type keyType = paramType.getActualTypeArguments()[0];
+    Type valueType = paramType.getActualTypeArguments()[1];
+
+    // If either key or value type contains interfaces or wildcards, we can't handle it
+    if (ParserCommonUtils.isInterface(keyType) || ParserCommonUtils.containsWildcard(keyType) ||
+        ParserCommonUtils.containsInterface(valueType) || ParserCommonUtils.containsWildcard(valueType)) {
+      return false;
+    }
+
+    return true;
   }
 
   @Override
@@ -107,18 +121,6 @@ public class MapFieldParser implements TypeParser {
     String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
     String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");
     String keyVar = ParserCommonUtils.getVariableNameForLevel(level, "Key");
-
-    // Check for unsupported key/value types BEFORE generating parsing code
-    if (ParserCommonUtils.isInterface(keyType) || ParserCommonUtils.containsWildcard(keyType)) {
-      code.addStatement("// Skipping map field due to unsupported interface or wildcard in key type: $L", keyType.getTypeName());
-      code.addStatement("final $T $L = null", fieldType, mapVar); // Declare null var
-      return mapVar;
-    }
-    if (ParserCommonUtils.isInterface(valueType) || ParserCommonUtils.containsWildcard(valueType)) {
-      code.addStatement("// Skipping map field due to unsupported interface or wildcard in value type: $L", valueType.getTypeName());
-      code.addStatement("final $T $L = null", fieldType, mapVar); // Declare null var
-      return mapVar;
-    }
 
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONObjectHandle(), objVar, accessExpression);
 
