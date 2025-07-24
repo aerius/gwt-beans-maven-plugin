@@ -21,12 +21,14 @@ We're building a JSON parser generator that will replace GWT-RPC serialization. 
    - Map<String, String>, HashMap<String, Integer>
    - LinkedHashMap<String, Double>
    - All primitive arrays (int[], long[], double[], float[], byte[], short[], char[], boolean[])
+   - Object arrays (String[], Integer[], etc.)
 
 3. **Object Support**
 
    - Custom object references
    - Null handling for all types
    - Custom parser integration
+   - Polymorphic type support with @JsonTypeInfo and @JsonSubTypes
 
 4. **Complex Types**
    - List<CustomObject>
@@ -38,12 +40,27 @@ We're building a JSON parser generator that will replace GWT-RPC serialization. 
    - Map<Enum, String>
    - Map<Enum, CustomObject>
    - Map<Enum, primitive types>
+   - Nested collections and maps (2+ levels)
+   - Complex key types with fromStringValue() methods
+
+5. **Polymorphic Support**
+   - @JsonTypeInfo with NAME discriminator
+   - @JsonSubTypes for concrete implementations
+   - Automatic subtype discovery and parser generation
+   - Switch-based polymorphic parsing
+
+6. **Validation & Testing**
+   - Comprehensive type validation
+   - Custom parser discovery and integration
+   - Round-trip testing (JSON → Object → JSON)
+   - Generated vs expected parser comparison
+   - Unsupported type detection and error handling
 
 ### Remaining Implementation Tasks
 
-1. **Complex Nested Structures** [HIGH]
+1. **Complex Nested Structures** [MEDIUM]
 
-   - Deeply nested collections (3+ levels)
+   - Deeply nested collections (3+ levels) - partially working
    - Examples to implement:
      ```java
      class ComplexNested {
@@ -60,7 +77,7 @@ We're building a JSON parser generator that will replace GWT-RPC serialization. 
    - Add usage examples and best practices
    - Document performance considerations
 
-3. **Testing Strategy** [HIGH]
+3. **Testing Strategy** [MEDIUM]
 
    - Add performance benchmarks for different type combinations
    - Create stress tests for deeply nested structures
@@ -68,7 +85,7 @@ We're building a JSON parser generator that will replace GWT-RPC serialization. 
    - Implement test coverage reporting
    - Add integration tests with real-world scenarios
 
-4. **Performance Optimization** [MEDIUM]
+4. **Performance Optimization** [LOW]
    - Profile parser generation for large type hierarchies
    - Optimize memory usage during type analysis
    - Cache frequently used type information
@@ -96,10 +113,12 @@ The following types will NOT be supported due to GWT compatibility or design dec
    - Calendar
 
 4. **Collection Limitations**
-   - Map with non-String keys (except enums)
+   - Map with non-String keys (except enums and supported primitive wrappers)
    - Queue and Deque implementations
    - SortedSet/TreeSet
    - SortedMap/TreeMap
+   - Generic types with wildcards
+   - Inner classes (must be top-level)
 
 ## Development Constraints
 
@@ -129,6 +148,8 @@ The following types will NOT be supported due to GWT compatibility or design dec
 - Custom parsers sourced from original location
 - Uses Jackson for test serialization
 - Keep type analysis and parsing logic separate
+- Polymorphic types require both @JsonTypeInfo and @JsonSubTypes annotations
+- Interfaces must be annotated with @JsonTypeInfo for polymorphic handling
 
 ### Migration Guide
 
