@@ -1,6 +1,5 @@
 package nl.aerius.codegen.generator.parser;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 
 import com.palantir.javapoet.ClassName;
@@ -12,13 +11,6 @@ import com.palantir.javapoet.TypeName;
  * Parser for primitive and wrapper array fields (String[], int[], Integer[], double[], Double[]).
  */
 public class PrimitiveArrayFieldParser implements TypeParser {
-
-  // Removed unused static maps
-
-  @Override
-  public boolean canHandle(Field field) {
-    return canHandle(field.getGenericType());
-  }
 
   @Override
   public boolean canHandle(Type type) {
@@ -36,36 +28,6 @@ public class PrimitiveArrayFieldParser implements TypeParser {
         componentType.equals(int.class) || componentType.equals(Integer.class) ||
         componentType.equals(double.class) || componentType.equals(Double.class);
   }
-
-  // --- Deprecated Methods --- 
-  // These are kept for potential backward compatibility but are not used by the core logic.
-  @Override
-  @Deprecated
-  public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
-  }
-
-  @Override
-  @Deprecated
-  public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
-    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, fieldName);
-  }
-
-  @Override
-  @Deprecated
-  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage) {
-    return generateParsingCode(type, objVarName, parserPackage, "value");
-  }
-
-  @Override
-  @Deprecated
-  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
-    // Implementation omitted as it's deprecated and complex to map to the new style.
-    // Returning an empty block or throwing an exception might be appropriate.
-    return CodeBlock.builder().addStatement("// Deprecated generateParsingCode called for $L", fieldName).build();
-  }
-  // --- End Deprecated Methods --- 
-
 
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,

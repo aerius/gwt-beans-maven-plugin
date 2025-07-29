@@ -1,6 +1,5 @@
 package nl.aerius.codegen.generator.parser;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -14,16 +13,6 @@ import nl.aerius.codegen.generator.ParserWriterUtils;
  * Parser for Map fields.
  */
 public class MapFieldParser implements TypeParser {
-  // Map implementations
-  private static final ClassName HASH_MAP = ClassName.get("java.util", "HashMap");
-  private static final ClassName LINKED_HASH_MAP = ClassName.get("java.util", "LinkedHashMap");
-  private static final ClassName LIST = ClassName.get("java.util", "List");
-  private static final ClassName ARRAY_LIST = ClassName.get("java.util", "ArrayList");
-
-  @Override
-  public boolean canHandle(Field field) {
-    return canHandle(field.getGenericType());
-  }
 
   @Override
   public boolean canHandle(Type type) {
@@ -49,38 +38,6 @@ public class MapFieldParser implements TypeParser {
     }
 
     return true;
-  }
-
-  @Override
-  public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage) {
-    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, field.getName());
-  }
-
-  @Override
-  public CodeBlock generateParsingCode(Field field, String objVarName, String parserPackage, String fieldName) {
-    return generateParsingCode(field.getGenericType(), objVarName, parserPackage, fieldName);
-  }
-
-  @Override
-  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage) {
-    return generateParsingCode(type, objVarName, parserPackage, null);
-  }
-
-  @Override
-  public CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName) {
-    CodeBlock.Builder code = CodeBlock.builder();
-    CodeBlock accessExpression;
-    if (fieldName != null) {
-      accessExpression = ParserCommonUtils.createFieldAccessCode(type, objVarName, CodeBlock.of("$S", fieldName));
-      code.add(ParserCommonUtils.createFieldExistsCheck(objVarName, fieldName, true, innerCode -> {
-        String resultVar = generateParsingCodeInto(innerCode, type, objVarName, parserPackage, accessExpression, 1);
-        innerCode.addStatement("// Assign the result: config.set$L($L);", ParserCommonUtils.capitalize(fieldName), resultVar);
-      }));
-    } else {
-      accessExpression = CodeBlock.of("$L", objVarName);
-      generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, 1);
-    }
-    return code.build();
   }
 
   @Override
@@ -162,17 +119,14 @@ public class MapFieldParser implements TypeParser {
 
   private void addPutStatement(CodeBlock.Builder code, String mapVar, Type keyType, String keyVar, String valueVar) {
     CodeBlock keyExpression = CodeBlock.of("$L", keyVar); // Default to using the string key directly
-    boolean handled = false;
 
     if (keyType.equals(Integer.class)) {
       keyExpression = CodeBlock.of("Integer.parseInt($L)", keyVar);
-      handled = true;
     } else if (keyType instanceof Class<?> && ((Class<?>) keyType).isEnum()) {
       // Enum keys were handled earlier by creating an intermediate variable.
       // This part of addPutStatement should ideally not be reached for enums now.
       // However, keeping the check for robustness or if called directly.
       keyExpression = CodeBlock.of("$T.valueOf($L)", keyType, keyVar);
-      handled = true;
     } else if (keyType instanceof Class<?>) {
       // Check for complex key type with a fromStringValue method (like TestComplexKeyType)
       Class<?> keyClass = (Class<?>) keyType;
@@ -182,7 +136,6 @@ public class MapFieldParser implements TypeParser {
         if (java.lang.reflect.Modifier.isStatic(fromStringMethod.getModifiers()) &&
             keyClass.isAssignableFrom(fromStringMethod.getReturnType())) {
           keyExpression = CodeBlock.of("$T.fromStringValue($L)", keyType, keyVar);
-          handled = true;
         }
       } catch (NoSuchMethodException e) {
         // Method not found, continue to default

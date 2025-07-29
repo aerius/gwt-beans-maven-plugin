@@ -9,7 +9,7 @@ import com.palantir.javapoet.CodeBlock;
  * This extends FieldParser to maintain backward compatibility while adding support
  * for type-based parsing.
  */
-public interface TypeParser extends FieldParser {
+public interface TypeParser {
     /**
      * Checks if this parser can handle the given type.
      * 
@@ -17,18 +17,6 @@ public interface TypeParser extends FieldParser {
      * @return true if this parser can handle the type
      */
     boolean canHandle(Type type);
-
-    /**
-     * @deprecated Use generateParsingCodeInto instead for recursive generation.
-     */
-    @Deprecated
-    CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage);
-
-    /**
-     * @deprecated Use generateParsingCodeInto instead for recursive generation.
-     */
-    @Deprecated
-    CodeBlock generateParsingCode(Type type, String objVarName, String parserPackage, String fieldName);
 
     /**
      * Generates code to parse the given type and appends it to the builder.

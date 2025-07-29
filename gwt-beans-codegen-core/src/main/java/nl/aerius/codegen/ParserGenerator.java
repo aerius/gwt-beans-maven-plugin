@@ -173,7 +173,6 @@ public class ParserGenerator {
     }
   }
 
-
   /**
    * Generates parsers for the given target class and all its dependencies.
    *
