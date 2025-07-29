@@ -151,7 +151,6 @@ public class ConfigurationValidator {
   }
 
   private void validateClass(final Class<?> clazz) {
-    // ADDED BLOCK START: Skip irrelevant types
     if (clazz == null ||
         clazz.isPrimitive() ||
         clazz.isEnum() ||
@@ -160,7 +159,6 @@ public class ConfigurationValidator {
         isSkipped(clazz)) { // Using the helper method is safer than checking name directly
       return; // Nothing to validate for these types
     }
-    // ADDED BLOCK END
 
     // Original logic starts here
     if (!validatedClasses.add(clazz)) {
