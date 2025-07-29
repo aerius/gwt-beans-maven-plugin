@@ -254,6 +254,25 @@ public final class ParserCommonUtils {
   }
 
   /**
+   * Checks if the given type or its type arguments contain an interface.
+   * Recursively checks parameterized types.
+   */
+  public static boolean containsInterface(Type type) {
+    if (isInterface(type)) {
+      return true;
+    }
+    if (type instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) type;
+      for (Type arg : pt.getActualTypeArguments()) {
+        if (containsInterface(arg)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Finds a static method annotated with @JsonCreator that takes a single String
    * argument and returns the enum type.
    *

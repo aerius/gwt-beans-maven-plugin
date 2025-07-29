@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonKey;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.palantir.javapoet.ClassName;
 
 import jsinterop.annotations.JsProperty;
@@ -48,6 +49,8 @@ public class ConfigurationValidator {
     if (customParserTypes != null) {
       this.customParserTypes.addAll(customParserTypes);
     }
+    // Also set custom parser types on the TypeAnalyzer instance
+    this.typeAnalyzer.setCustomParserTypes(customParserTypes);
   }
 
   public void addSkippedType(String fullyQualifiedClassName) {
@@ -148,8 +151,63 @@ public class ConfigurationValidator {
   }
 
   private void validateClass(final Class<?> clazz) {
+    if (clazz == null ||
+        clazz.isPrimitive() ||
+        clazz.isEnum() ||
+        clazz.getName().startsWith("java.") ||
+        hasCustomParser(clazz) || // Using the helper method is safer than checkinggetSimpleName
+        isSkipped(clazz)) { // Using the helper method is safer than checking name directly
+      return; // Nothing to validate for these types
+    }
+
+    // Original logic starts here
     if (!validatedClasses.add(clazz)) {
       return; // Already validated this class
+    }
+
+    // Determine if errors should be treated as warnings based on superclass or implemented interfaces
+    boolean treatErrorsAsWarnings = false;
+    Class<?> parentToCheck = clazz.getSuperclass();
+    if (parentToCheck != null && !parentToCheck.equals(Object.class)) {
+      if (hasCustomParser(parentToCheck) && parentToCheck.isAnnotationPresent(JsonTypeInfo.class)) {
+        treatErrorsAsWarnings = true;
+      }
+    }
+    // Also check implemented interfaces if not already determined
+    if (!treatErrorsAsWarnings) {
+      for (Class<?> interfaceToCheck : clazz.getInterfaces()) {
+        if (hasCustomParser(interfaceToCheck) && interfaceToCheck.isAnnotationPresent(JsonTypeInfo.class)) {
+          treatErrorsAsWarnings = true;
+          parentToCheck = interfaceToCheck; // Keep track of the parent causing the warning mode
+          break; // Found one, no need to check others
+        }
+      }
+    }
+
+    // Log if we are treating errors as warnings
+    if (treatErrorsAsWarnings) {
+      System.out.println("\u2139\ufe0f  " + clazz.getName() + ": Parent " + parentToCheck.getSimpleName()
+          + " has custom parser and @JsonTypeInfo. Subclass validation issues will be treated as warnings.");
+    }
+
+    // Flag to track if *this specific class* has any issues (error or warning)
+    boolean classHasIssues = false;
+
+    // Check for interfaces without @JsonTypeInfo - this is always an error
+    if (clazz.isInterface() && !clazz.isAnnotationPresent(JsonTypeInfo.class)) {
+      System.out.println(RED_CROSS + " " + clazz.getName() + ": Interface must be annotated with @JsonTypeInfo for polymorphic handling.");
+      hasErrors = true;
+      classHasIssues = true;
+      // We don't return here, allowing other checks if applicable, though interfaces have limited other checks.
+    }
+
+    // Check for interfaces with @JsonTypeInfo but without @JsonSubTypes
+    if (clazz.isInterface() && clazz.isAnnotationPresent(JsonTypeInfo.class)
+        && !clazz.isAnnotationPresent(com.fasterxml.jackson.annotation.JsonSubTypes.class)) {
+      System.out.println(RED_CROSS + " " + clazz.getName()
+          + ": Interface with @JsonTypeInfo must also be annotated with @JsonSubTypes to define concrete implementations.");
+      hasErrors = true;
+      classHasIssues = true;
     }
 
     if (clazz.isArray()) {
@@ -158,31 +216,10 @@ public class ConfigurationValidator {
       return;
     }
 
-    if (clazz.isPrimitive() ||
-        clazz.equals(String.class) ||
-        clazz.isEnum() ||
-        clazz.equals(Integer.class) ||
-        clazz.equals(Long.class) ||
-        clazz.equals(Double.class) ||
-        clazz.equals(Float.class) ||
-        clazz.equals(Boolean.class) ||
-        clazz.getName().startsWith("java.") ||
-        hasCustomParser(clazz)) {
-      return;
-    }
-
-    // First validate superclass if it exists
-    final Class<?> superclass = clazz.getSuperclass();
-    if (superclass != null && !superclass.equals(Object.class)) {
-      validateClass(superclass);
-    }
-
-    // Interfaces are not allowed
-    if (clazz.isInterface()) {
-      System.out
-          .println(
-              WARNING + " " + clazz.getName() + ": Interface type detected (TODO)");
-      return;
+    // First validate superclass (recursive calls will handle their own error/warning logic)
+    final Class<?> superclassToValidate = clazz.getSuperclass();
+    if (superclassToValidate != null && !superclassToValidate.equals(Object.class)) {
+      validateClass(superclassToValidate);
     }
 
     // Generic types are not allowed
@@ -190,24 +227,30 @@ public class ConfigurationValidator {
       System.out
           .println(WARNING + " " + clazz.getName()
               + ": Generic type parameters are not supported - Remove type parameters like <T>");
-      return;
+      // This is just a warning, don't set classHasIssues or return
     }
 
     // Inner classes are not allowed
     if (clazz.isMemberClass()) {
+      String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
       System.out
-          .println(RED_CROSS + " " + clazz.getName() + ": Inner classes are not supported - Move class to top level");
-      hasErrors = true;
-      return;
+          .println(prefix + " " + clazz.getName() + ": Inner classes are not supported - Move class to top level");
+      if (!treatErrorsAsWarnings) { // Only set hasErrors if it's a real error
+        hasErrors = true;
+      }
+      classHasIssues = true;
+      return; // Still return as this is a fundamental issue
     }
 
-    boolean classHasErrors = false;
-
-    // Check for public no-args constructor
-    classHasErrors |= !validateConstructor(clazz);
+    // Check for public no-args constructor (Skip for interfaces)
+    if (!clazz.isInterface()) {
+      if (!validateConstructor(clazz, treatErrorsAsWarnings)) {
+        classHasIssues = true;
+      }
+    }
 
     // Check for getters without corresponding fields
-    validateGettersWithoutFields(clazz);
+    validateGettersWithoutFields(clazz); // This only prints warnings, doesn't set hasErrors
 
     // Check all fields
     for (Field field : clazz.getDeclaredFields()) {
@@ -215,13 +258,20 @@ public class ConfigurationValidator {
         continue;
       }
 
-      classHasErrors |= !validateField(clazz, field);
-      classHasErrors |= !validateGetterSetter(clazz, field);
-      classHasErrors |= !validateFieldType(field);
+      if (!validateField(clazz, field, treatErrorsAsWarnings)) {
+        classHasIssues = true;
+      }
+      if (!validateGetterSetter(clazz, field, treatErrorsAsWarnings)) {
+        classHasIssues = true;
+      }
+      if (!validateFieldType(clazz, field, treatErrorsAsWarnings)) { // Pass class for context
+        classHasIssues = true;
+      }
     }
 
-    if (!classHasErrors) {
-      System.out.println(GREEN_CHECK + " " + clazz.getName() + ": All validations passed");
+    // Print summary message only if no errors *or* warnings were found for this specific class
+    if (!classHasIssues) {
+      System.out.println(GREEN_CHECK + " " + clazz.getName() + ": All validations passed for this class");
     }
   }
 
@@ -267,31 +317,41 @@ public class ConfigurationValidator {
     }
   }
 
-  private boolean validateConstructor(final Class<?> clazz) {
+  private boolean validateConstructor(final Class<?> clazz, boolean treatErrorsAsWarnings) {
     try {
       final Constructor<?> constructor = clazz.getConstructor();
       if (!Modifier.isPublic(constructor.getModifiers())) {
-        System.out.println(RED_CROSS + " " + clazz.getName() + ": Must have a public no-args constructor");
-        hasErrors = true;
+        String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
+        System.out.println(prefix + " " + clazz.getName() + ": Must have a public no-args constructor (constructor not public)");
+        if (!treatErrorsAsWarnings) {
+          hasErrors = true;
+        }
         return false;
       }
       return true;
     } catch (NoSuchMethodException e) {
-      System.out.println(RED_CROSS + " " + clazz.getName() + ": Must have a public no-args constructor");
-      hasErrors = true;
+      String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
+      System.out.println(prefix + " " + clazz.getName() + ": Must have a public no-args constructor (constructor not found)");
+      if (!treatErrorsAsWarnings) {
+        hasErrors = true;
+      }
       return false;
     }
   }
 
-  private boolean validateField(final Class<?> clazz, final Field field) {
+  private boolean validateField(final Class<?> clazz, final Field field, boolean treatErrorsAsWarnings) {
     boolean isValid = true;
     if (!Modifier.isPrivate(field.getModifiers())) {
-      System.out.println(RED_CROSS + " " + clazz.getName() + ": Field '" + field.getName() + "' should be private");
-      hasErrors = true;
+      String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
+      System.out.println(prefix + " " + clazz.getName() + ": Field '" + field.getName() + "' should be private");
+      if (!treatErrorsAsWarnings) {
+        hasErrors = true;
+      }
       isValid = false;
     }
 
     // Check if collection types have @JsProperty annotation (required for VueGWT)
+    // This remains a warning regardless of the treatErrorsAsWarnings flag
     if ((Collection.class.isAssignableFrom(field.getType()) ||
         Map.class.isAssignableFrom(field.getType()) ||
         field.getType().equals(List.class) ||
@@ -299,15 +359,17 @@ public class ConfigurationValidator {
         !field.isAnnotationPresent(JsProperty.class)) {
       System.out.println("⚠️ " + clazz.getName() + ": Collection field '" + field.getName()
           + "' missing @JsProperty annotation - This may cause issues with VueGWT");
+      // This specific check does not set hasErrors or affect isValid, it's just informational
     }
 
     return isValid;
   }
 
-  private boolean validateGetterSetter(final Class<?> clazz, final Field field) {
+  private boolean validateGetterSetter(final Class<?> clazz, final Field field, boolean treatErrorsAsWarnings) {
     final String fieldName = field.getName();
     final String capitalizedName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
     boolean isValid = true;
+    String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
 
     // Check for either public getter or @JsonProperty
     final boolean hasJsonProperty = field.isAnnotationPresent(JsonProperty.class);
@@ -336,17 +398,21 @@ public class ConfigurationValidator {
     }
 
     if (!hasValidGetter && !hasJsonProperty) {
-      System.out.println(RED_CROSS + " " + clazz.getName() + ": Field '" + fieldName
+      System.out.println(prefix + " " + clazz.getName() + ": Field '" + fieldName
           + "' must have either a public getter or @JsonProperty annotation");
-      hasErrors = true;
+      if (!treatErrorsAsWarnings) {
+        hasErrors = true;
+      }
       isValid = false;
     } else if (hasValidGetter && !hasJsonProperty) {
       // If only a getter is present, check if its return type matches the field type
       if (foundGetter != null && !foundGetter.getReturnType().equals(field.getType())) {
-        System.out.println(RED_CROSS + " " + clazz.getName() + ": Field '" + fieldName + "' type ("
+        System.out.println(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' type ("
             + field.getType().getName() + ") does not match public getter '" + foundGetter.getName()
             + "' return type (" + foundGetter.getReturnType().getName() + ")");
-        hasErrors = true;
+        if (!treatErrorsAsWarnings) {
+          hasErrors = true;
+        }
         isValid = false;
       }
     }
@@ -355,23 +421,27 @@ public class ConfigurationValidator {
     try {
       final Method setter = clazz.getMethod("set" + capitalizedName, field.getType());
       if (!Modifier.isPublic(setter.getModifiers())) {
-        System.out.println(RED_CROSS + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter");
-        hasErrors = true;
+        System.out.println(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter (setter not public)");
+        if (!treatErrorsAsWarnings) {
+          hasErrors = true;
+        }
         isValid = false;
       }
     } catch (NoSuchMethodException e) {
-      System.out.println(RED_CROSS + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter");
-      hasErrors = true;
+      System.out.println(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter (setter not found)");
+      if (!treatErrorsAsWarnings) {
+        hasErrors = true;
+      }
       isValid = false;
     }
 
     return isValid;
   }
 
-  private boolean validateFieldType(final Field field) {
+  private boolean validateFieldType(final Class<?> declaringClass, final Field field, boolean treatErrorsAsWarnings) { // Added declaringClass param
+    boolean fieldTypeIsValid = true; // Use local flag for this specific validation
+    String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
     try {
-      final boolean isValid = true;
-
       // Check if this is a Map field
       if (Map.class.isAssignableFrom(field.getType())) {
         final Type[] genericTypes = ((ParameterizedType) field.getGenericType()).getActualTypeArguments();
@@ -392,7 +462,7 @@ public class ConfigurationValidator {
               keyClass.equals(Byte.class) ||
               keyClass.equals(Short.class) ||
               keyClass.equals(Character.class)) {
-            return isValid;
+            return fieldTypeIsValid;
           }
 
           // Check for toStringValue implementation or JsonKey annotation
@@ -408,21 +478,26 @@ public class ConfigurationValidator {
             try {
               final Method toStringValueMethod = keyClass.getMethod("toStringValue");
               if (!Modifier.isPublic(toStringValueMethod.getModifiers())) {
-                System.out.println(WARNING + " " + field.getDeclaringClass().getName() +
+                // Keep JsonKey message as a warning regardless of the flag
+                System.out.println(WARNING + " " + declaringClass.getName() +
                     ": Map key type '" + keyClass.getName() +
                     "' should use @JsonKey annotation instead of toStringValue method");
-                System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                System.out.println(prefix + " " + declaringClass.getName() +
                     ": Map key type '" + keyClass.getName() +
-                    "' must have a public toStringValue() method or @JsonKey annotation");
-                hasErrors = true;
-                return false;
+                    "' must have a public toStringValue() method or @JsonKey annotation (method not public)");
+                if (!treatErrorsAsWarnings) {
+                  hasErrors = true;
+                }
+                fieldTypeIsValid = false;
               }
             } catch (NoSuchMethodException e) {
-              System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+              System.out.println(prefix + " " + declaringClass.getName() +
                   ": Map key type '" + keyClass.getName() +
-                  "' must have either a toStringValue() method or @JsonKey annotation");
-              hasErrors = true;
-              return false;
+                  "' must have either a toStringValue() method or @JsonKey annotation (method not found)");
+              if (!treatErrorsAsWarnings) {
+                hasErrors = true;
+              }
+              fieldTypeIsValid = false;
             }
           }
 
@@ -439,21 +514,26 @@ public class ConfigurationValidator {
             try {
               final Method fromStringValueMethod = keyClass.getMethod("fromStringValue", String.class);
               if (!Modifier.isStatic(fromStringValueMethod.getModifiers())) {
-                System.out.println(WARNING + " " + field.getDeclaringClass().getName() +
+                // Keep JsonCreator message as a warning regardless of the flag
+                System.out.println(WARNING + " " + declaringClass.getName() +
                     ": Map key type '" + keyClass.getName() +
                     "' should use @JsonCreator annotation instead of fromStringValue method");
-                System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+                System.out.println(prefix + " " + declaringClass.getName() +
                     ": Map key type '" + keyClass.getName() +
-                    "' must have a static fromStringValue(String) method or @JsonCreator annotation");
-                hasErrors = true;
-                return false;
+                    "' must have a static fromStringValue(String) method or @JsonCreator annotation (method not static)");
+                if (!treatErrorsAsWarnings) {
+                  hasErrors = true;
+                }
+                fieldTypeIsValid = false;
               }
             } catch (NoSuchMethodException e) {
-              System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() +
+              System.out.println(prefix + " " + declaringClass.getName() +
                   ": Map key type '" + keyClass.getName() +
-                  "' must have either a static fromStringValue(String) method or @JsonCreator annotation");
-              hasErrors = true;
-              return false;
+                  "' must have either a static fromStringValue(String) method or @JsonCreator annotation (method not found)");
+              if (!treatErrorsAsWarnings) {
+                hasErrors = true;
+              }
+              fieldTypeIsValid = false;
             }
           }
         }
@@ -462,13 +542,17 @@ public class ConfigurationValidator {
       // Process all types in the field
       FileUtils.analyzeFieldType(field, type -> {
         if (type instanceof Class<?>) {
+          // Recursively call validateClass - it will handle its own error/warning logic
           validateClass((Class<?>) type);
         }
       });
-      return isValid;
+      return fieldTypeIsValid; // Return the validity of this specific check
     } catch (TypeNotPresentException e) {
-      System.out.println(RED_CROSS + " " + field.getDeclaringClass().getName() + ": Type not found: " + e.typeName());
-      hasErrors = true;
+      System.out
+          .println(prefix + " " + declaringClass.getName() + ": Type not found: " + e.typeName() + " referenced by field '" + field.getName() + "'");
+      if (!treatErrorsAsWarnings) {
+        hasErrors = true;
+      }
       return false;
     }
   }

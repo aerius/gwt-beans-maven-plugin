@@ -95,7 +95,7 @@ public final class ParserWriterUtils {
   public static void generateParserForFields(TypeSpec.Builder typeSpec, Class<?> targetClass, String parserPackage) {
     typeSpec.addMethod(createStringParseMethod(targetClass));
     // Decide which kind of object parse method to generate based on polymorphism
-    if (isPolymorphicBase(targetClass)) {
+    if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
       typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
     } else {
       typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
@@ -436,7 +436,7 @@ public final class ParserWriterUtils {
   }
 
   // Helper to check for Polymorphic Base Class annotations
-  private static boolean isPolymorphicBase(Class<?> clazz) {
+  private static boolean hasJsonTypeInfoWithNameDiscriminator(Class<?> clazz) {
     JsonTypeInfo typeInfo = clazz.getAnnotation(JsonTypeInfo.class);
     JsonSubTypes subTypes = clazz.getAnnotation(JsonSubTypes.class);
     // Check for the specific combination we want to handle
@@ -449,14 +449,14 @@ public final class ParserWriterUtils {
     if (typeInfo != null) {
       return typeInfo.property();
     }
-    return null; // Should not happen if isPolymorphicBase is true
+    return null; // Should not happen if hasJsonTypeInfoWithNameDiscriminator is true
   }
 
   // Helper to find the superclass that is the polymorphic base, if any
   private static Class<?> findPolymorphicSuperclass(Class<?> clazz) {
     Class<?> superclass = clazz.getSuperclass();
     while (superclass != null && superclass != Object.class) {
-      if (isPolymorphicBase(superclass)) {
+      if (hasJsonTypeInfoWithNameDiscriminator(superclass)) {
         return superclass;
       }
       superclass = superclass.getSuperclass();
