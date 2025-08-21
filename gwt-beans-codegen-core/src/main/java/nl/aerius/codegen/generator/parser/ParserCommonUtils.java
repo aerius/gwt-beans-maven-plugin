@@ -15,6 +15,9 @@ import com.palantir.javapoet.AnnotationSpec;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 
+import nl.aerius.codegen.util.ClassFinder;
+import nl.aerius.codegen.util.Logger;
+
 /**
  * Common utilities for parser generation.
  */
@@ -70,7 +73,7 @@ public final class ParserCommonUtils {
    * @param generatorDetails Additional details like version and Git hash.
    * @return The configured AnnotationSpec.
    */
-  public static AnnotationSpec createGeneratedAnnotation(String generatorName, String generatorDetails) {
+  public static AnnotationSpec createGeneratedAnnotation(final String generatorName, final String generatorDetails) {
     return AnnotationSpec.builder(Generated.class)
         .addMember("value", "$S", generatorName) // Use generator name for value
         // .addMember("date", "$S", timestamp)        // Remove date element
@@ -82,17 +85,18 @@ public final class ParserCommonUtils {
    * Helper method to check if a field exists and is not null in a JSON object.
    * For primitive types, only checks existence since they cannot be null.
    * For wrapper types and objects, checks both existence and non-null.
-   * 
+   *
    * @param objVarName     The variable name of the JSON object
    * @param fieldName      The name of the field to check
    * @param requireNonNull Whether to also check that the field is not null (ignored for primitive types)
-   * @param body          The code to execute inside the if block
+   * @param body           The code to execute inside the if block
    * @return A code block with the if statement
    */
-  public static CodeBlock createFieldExistsCheck(String objVarName, String fieldName, boolean requireNonNull, Consumer<CodeBlock.Builder> body) {
+  public static CodeBlock createFieldExistsCheck(final String objVarName, final String fieldName, final boolean requireNonNull,
+      final Consumer<CodeBlock.Builder> body) {
     final CodeBlock.Builder code = CodeBlock.builder();
     // Use CodeBlock for fieldName to handle potential variables vs String literals if needed later
-    CodeBlock fieldNameBlock = CodeBlock.of("$S", fieldName);
+    final CodeBlock fieldNameBlock = CodeBlock.of("$S", fieldName);
     if (requireNonNull) {
       code.beginControlFlow("if ($L.has($L) && !$L.isNull($L))", objVarName, fieldNameBlock, objVarName, fieldNameBlock);
     } else {
@@ -106,7 +110,7 @@ public final class ParserCommonUtils {
   /**
    * Capitalizes the first letter of a string.
    */
-  public static String capitalize(String str) {
+  public static String capitalize(final String str) {
     if (str == null || str.isEmpty()) {
       return str;
     }
@@ -123,7 +127,7 @@ public final class ParserCommonUtils {
    * @return The generated variable name.
    * @throws IllegalArgumentException if level < 1.
    */
-  public static String getVariableNameForLevel(int level, String baseSuffix) {
+  public static String getVariableNameForLevel(final int level, final String baseSuffix) {
     if (level < 1) {
       throw new IllegalArgumentException("Level cannot be less than 1");
     }
@@ -135,11 +139,11 @@ public final class ParserCommonUtils {
 
     if (level == 1) {
       // Level 1: Ensure the first letter is lowercase (no need for null check now)
-      String firstChar = baseSuffix.substring(0, 1).toLowerCase();
+      final String firstChar = baseSuffix.substring(0, 1).toLowerCase();
       return firstChar + baseSuffix.substring(1);
     } else {
       // Level > 1: Prepend "levelN" and Capitalize the suffix (no need for null check now)
-      String capitalizedSuffix = Character.toUpperCase(baseSuffix.charAt(0)) + baseSuffix.substring(1);
+      final String capitalizedSuffix = Character.toUpperCase(baseSuffix.charAt(0)) + baseSuffix.substring(1);
       return "level" + level + capitalizedSuffix;
     }
   }
@@ -154,9 +158,9 @@ public final class ParserCommonUtils {
    * @param keyOrFieldNameExpression A CodeBlock representing the key or field name (e.g., "fieldName" or a variable like levelXKey).
    * @return A CodeBlock like `objVar.getObject(keyOrFieldNameExpression)` or `objVar.getString(keyOrFieldNameExpression)`.
    */
-  public static CodeBlock createFieldAccessCode(Type type, String objVarName, CodeBlock keyOrFieldNameExpression) {
+  public static CodeBlock createFieldAccessCode(final Type type, final String objVarName, final CodeBlock keyOrFieldNameExpression) {
     if (type instanceof Class<?>) {
-      Class<?> clazz = (Class<?>) type;
+      final Class<?> clazz = (Class<?>) type;
       if (clazz.equals(String.class)) {
         return CodeBlock.of("$L.getString($L)", objVarName, keyOrFieldNameExpression);
       } else if (clazz.equals(Integer.class) || clazz.equals(int.class)) {
@@ -186,10 +190,10 @@ public final class ParserCommonUtils {
         return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
       }
     } else if (type instanceof ParameterizedType) {
-      ParameterizedType paramType = (ParameterizedType) type;
-      Type rawType = paramType.getRawType();
+      final ParameterizedType paramType = (ParameterizedType) type;
+      final Type rawType = paramType.getRawType();
       if (rawType instanceof Class<?>) {
-        Class<?> rawClass = (Class<?>) rawType;
+        final Class<?> rawClass = (Class<?>) rawType;
         if (Map.class.isAssignableFrom(rawClass)) {
           // Maps are represented as JSON objects
           return CodeBlock.of("$L.getObject($L)", objVarName, keyOrFieldNameExpression);
@@ -214,21 +218,21 @@ public final class ParserCommonUtils {
    * @param type The type to check.
    * @return true if the type is a primitive (int, long, boolean, etc.), false otherwise.
    */
-  public static boolean isPrimitiveType(Type type) {
+  public static boolean isPrimitiveType(final Type type) {
     return (type instanceof Class<?>) && ((Class<?>) type).isPrimitive();
   }
 
   /**
    * Checks if the given type is an interface.
    */
-  public static boolean isInterface(Type type) {
+  public static boolean isInterface(final Type type) {
     return (type instanceof Class<?>) && ((Class<?>) type).isInterface();
   }
 
   /**
    * Checks if the given type is a wildcard type (?).
    */
-  public static boolean isWildcard(Type type) {
+  public static boolean isWildcard(final Type type) {
     return type instanceof java.lang.reflect.WildcardType;
   }
 
@@ -236,13 +240,13 @@ public final class ParserCommonUtils {
    * Checks if the given type or its type arguments contain a wildcard.
    * Recursively checks parameterized types.
    */
-  public static boolean containsWildcard(Type type) {
+  public static boolean containsWildcard(final Type type) {
     if (isWildcard(type)) {
       return true;
     }
     if (type instanceof ParameterizedType) {
-      ParameterizedType pt = (ParameterizedType) type;
-      for (Type arg : pt.getActualTypeArguments()) {
+      final ParameterizedType pt = (ParameterizedType) type;
+      for (final Type arg : pt.getActualTypeArguments()) {
         if (containsWildcard(arg)) {
           return true;
         }
@@ -257,13 +261,13 @@ public final class ParserCommonUtils {
    * Checks if the given type or its type arguments contain an interface.
    * Recursively checks parameterized types.
    */
-  public static boolean containsInterface(Type type) {
+  public static boolean containsInterface(final Type type) {
     if (isInterface(type)) {
       return true;
     }
     if (type instanceof ParameterizedType) {
-      ParameterizedType pt = (ParameterizedType) type;
-      for (Type arg : pt.getActualTypeArguments()) {
+      final ParameterizedType pt = (ParameterizedType) type;
+      for (final Type arg : pt.getActualTypeArguments()) {
         if (containsInterface(arg)) {
           return true;
         }
@@ -276,20 +280,22 @@ public final class ParserCommonUtils {
    * Finds a static method annotated with @JsonCreator that takes a single String
    * argument and returns the enum type.
    *
-   * @param enumType The enum class to inspect.
+   * @param enumType    The enum class to inspect.
+   * @param classFinder Util to get the class based on the name
+   * @param logger      Logger to log progress
    * @return The Method object if found, otherwise null.
    */
-  public static Method findJsonCreatorMethod(Class<?> enumType) {
+  public static Method findJsonCreatorMethod(final Class<?> enumType, final ClassFinder classFinder, Logger logger) {
     // Check if it's actually an enum first
     if (enumType == null || !enumType.isEnum()) {
       return null;
     }
     try {
       @SuppressWarnings("unchecked")
-      Class<? extends java.lang.annotation.Annotation> jsonCreatorClass = (Class<? extends java.lang.annotation.Annotation>) Class
+      final Class<? extends java.lang.annotation.Annotation> jsonCreatorClass = (Class<? extends java.lang.annotation.Annotation>) classFinder
           .forName(JSON_CREATOR_ANNOTATION);
 
-      for (Method method : enumType.getDeclaredMethods()) {
+      for (final Method method : enumType.getDeclaredMethods()) {
         if (method.isAnnotationPresent(jsonCreatorClass) &&
             Modifier.isStatic(method.getModifiers()) &&
             method.getParameterCount() == 1 &&
@@ -298,10 +304,10 @@ public final class ParserCommonUtils {
           return method;
         }
       }
-    } catch (ClassNotFoundException e) {
+    } catch (final ClassNotFoundException e) {
       // Annotation not found, expected if Jackson is not used/available
-    } catch (Exception e) {
-      System.err.println("Warning: Error checking for @JsonCreator on " + enumType.getName() + ": " + e.getMessage());
+    } catch (final Exception e) {
+      logger.warn("Warning: Error checking for @JsonCreator on " + enumType.getName() + ": " + e.getMessage());
     }
     return null;
   }

@@ -14,17 +14,20 @@ import org.junit.jupiter.api.Test;
 
 import com.palantir.javapoet.ClassName;
 
+import nl.aerius.codegen.util.ClassFinder;
+import nl.aerius.codegen.util.Logger;
+
 class TypeAnalyzerTest {
   private TypeAnalyzer analyzer;
 
   @BeforeEach
   void setUp() {
-    analyzer = new TypeAnalyzer();
+    analyzer = new TypeAnalyzer(new ClassFinder() {}, new Logger() {});
   }
 
   @Test
   void testBasicTypeAnalysis() {
-    Set<ClassName> types = analyzer.analyzeClass(TestClass.class.getName());
+    final Set<ClassName> types = analyzer.analyzeClass(TestClass.class.getName());
 
     assertTrue(types.contains(ClassName.get("nl.aerius.codegen.analyzer", "TypeAnalyzerTest_TestClass")));
     assertTrue(types.contains(ClassName.get("nl.aerius.codegen.analyzer", "TypeAnalyzerTest_NestedClass")));
@@ -40,7 +43,7 @@ class TypeAnalyzerTest {
   @Test
   void testCustomParserTypeHandling() {
     analyzer.setCustomParserTypes(Set.of("CustomParserType"));
-    Set<ClassName> types = analyzer.analyzeClass(CustomParserTestClass.class.getName());
+    final Set<ClassName> types = analyzer.analyzeClass(CustomParserTestClass.class.getName());
     System.out.println("Discovered types with custom parser: " + types);
 
     assertFalse(types.contains(ClassName.get("nl.aerius.codegen.analyzer", "TypeAnalyzerTest_CustomParserType")));
@@ -49,7 +52,7 @@ class TypeAnalyzerTest {
 
   @Test
   void testNestedCollectionTypes() {
-    Set<ClassName> types = analyzer.analyzeClass(NestedCollectionTestClass.class.getName());
+    final Set<ClassName> types = analyzer.analyzeClass(NestedCollectionTestClass.class.getName());
     System.out.println("Discovered nested collection types: " + types);
 
     assertTrue(
