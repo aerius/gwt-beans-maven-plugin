@@ -49,8 +49,9 @@ This parameter is required.
 ### outputDir
 
 The source directory the generated Parsers will be stored in.
-To generate the parsers in the src directory use `<outputDir>${project.basedir}/src/main/java</outputDir>`.
-By default this directory will be `target/generated-sources/gwt-bean-parsers`.
+By default this directory will be `${project.basedir}/src/main/java`.
+To generate the parsers in the a different directory,
+for example in target map to always dynamically generate files use something like `${project.build.directory}/generated-sources/gwt-bean-parsers`.
 
 ### customParserDir
 

@@ -61,7 +61,7 @@ public class ParserGeneratorMojo extends AbstractMojo {
   /**
    * The base source directory the Parser classes will be generated in.
    */
-  @Parameter(defaultValue = "${project.build.directory}/generated-sources/gwt-bean-parsers")
+  @Parameter(defaultValue = "${project.basedir}/src/main/java")
   private String outputDir;
 
   /**
@@ -83,8 +83,9 @@ public class ParserGeneratorMojo extends AbstractMojo {
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
     final MojoLogger logger = new MojoLogger();
-    final String absoluteOutputDir = absoluteOrProjectRelative(outputDir);
-    final String customParserDirectory = absoluteOrProjectRelative(customParserDir);
+    final String absoluteJavaSourceDir = Paths.get(project.getBasedir().getAbsolutePath(), "src/main/java/").toFile().getAbsolutePath();
+    final String absoluteOutputDir = absoluteOrProjectRelative(outputDir, absoluteJavaSourceDir);
+    final String customParserDirectory = absoluteOrProjectRelative(customParserDir, absoluteJavaSourceDir);
 
     getLog().info("Step 0: Start generating parsers");
     getLog().info("Output directory: " + outputDir);
@@ -100,28 +101,32 @@ public class ParserGeneratorMojo extends AbstractMojo {
     } catch (ClassNotFoundException | IOException | DependencyResolutionRequiredException |  IllegalArgumentException | SecurityException e) {
       throw new MojoExecutionException(e);
     }
-    addGeneratedSourcesAsResource(absoluteOutputDir);
+    addGeneratedSourcesAsResource(absoluteOutputDir, absoluteJavaSourceDir);
   }
 
-  private String absoluteOrProjectRelative(final String path) {
+  private String absoluteOrProjectRelative(final String path, final String absoluteJavaSourceDir) {
     if (path == null) {
       return null;
     }
     final File directory = new File(path);
+
     if (directory.exists()) {
       return directory.getAbsolutePath();
     } else {
-      return Paths.get(project.getBasedir().getAbsolutePath(), "src/main/java/" + path).toFile().getAbsolutePath();
+      return Paths.get(absoluteJavaSourceDir, path).toFile().getAbsolutePath();
     }
   }
 
-  private void addGeneratedSourcesAsResource(final String outputPath) {
-    getLog().info("Add resource path" + outputPath);
-    final Resource resource = new Resource();
+  private void addGeneratedSourcesAsResource(final String outputPath, final String absoluteJavaSourceDir) {
+    // Only add as resource path if it's not in the projects src/main/java directory.
+    if (outputPath != null && !outputPath.startsWith(absoluteJavaSourceDir)) {
+      getLog().info("Add resource path" + outputPath);
+      final Resource resource = new Resource();
 
-    resource.setDirectory(outputPath);
-    project.addResource(resource);
-    project.addCompileSourceRoot(outputPath);
+      resource.setDirectory(outputPath);
+      project.addResource(resource);
+      project.addCompileSourceRoot(outputPath);
+    }
   }
 
   /**
