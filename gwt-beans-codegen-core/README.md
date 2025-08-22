@@ -58,7 +58,7 @@ class Example {
 The code generator can be used standalone or through Maven (recommended). For standalone use:
 
 ```bash
-java -cp ... nl.aerius.codegen.ParserGenerator \
+java -cp ... nl.aerius.codegen.Main \
   --root-class com.example.MyClass \
   --output-dir src/generated/java \
   --parser-package com.example.parser \

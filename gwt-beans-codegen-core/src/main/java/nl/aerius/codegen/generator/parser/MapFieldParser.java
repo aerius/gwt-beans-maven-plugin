@@ -8,18 +8,25 @@ import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 
 import nl.aerius.codegen.generator.ParserWriterUtils;
+import nl.aerius.codegen.util.Logger;
 
 /**
  * Parser for Map fields.
  */
 public class MapFieldParser implements TypeParser {
 
+  private final Logger logger;
+
+  public MapFieldParser(final Logger logger) {
+    this.logger = logger;
+  }
+
   @Override
-  public boolean canHandle(Type type) {
+  public boolean canHandle(final Type type) {
     if (!(type instanceof ParameterizedType)) {
       return false;
     }
-    ParameterizedType paramType = (ParameterizedType) type;
+    final ParameterizedType paramType = (ParameterizedType) type;
     if (!(paramType.getRawType() instanceof Class<?>)) {
       return false;
     }
@@ -28,8 +35,8 @@ public class MapFieldParser implements TypeParser {
     }
 
     // Check if the Map contains interfaces or wildcards in its type arguments
-    Type keyType = paramType.getActualTypeArguments()[0];
-    Type valueType = paramType.getActualTypeArguments()[1];
+    final Type keyType = paramType.getActualTypeArguments()[0];
+    final Type valueType = paramType.getActualTypeArguments()[1];
 
     // If either key or value type contains interfaces or wildcards, we can't handle it
     if (ParserCommonUtils.isInterface(keyType) || ParserCommonUtils.containsWildcard(keyType) ||
@@ -41,27 +48,28 @@ public class MapFieldParser implements TypeParser {
   }
 
   @Override
-  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
-      int level) {
+  public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
+      final CodeBlock accessExpression, final int level) {
     return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
   }
 
   @Override
-  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
-      int level, Type fieldType) {
+  public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
+      final CodeBlock accessExpression,
+      final int level, final Type fieldType) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("MapFieldParser cannot handle type: " + type.getTypeName());
     }
-    ParameterizedType mapRuntimeType = (ParameterizedType) type;
-    Type keyType = mapRuntimeType.getActualTypeArguments()[0];
-    Type valueType = mapRuntimeType.getActualTypeArguments()[1];
+    final ParameterizedType mapRuntimeType = (ParameterizedType) type;
+    final Type keyType = mapRuntimeType.getActualTypeArguments()[0];
+    final Type valueType = mapRuntimeType.getActualTypeArguments()[1];
 
     // Determine Map implementation based on fieldType
     ClassName mapImpl;
     Type typeForImplCheck = fieldType; // Start with the actual field type
 
     if (fieldType instanceof ParameterizedType) {
-      // If it's ParameterizedType (like HashMap<String, Integer>), 
+      // If it's ParameterizedType (like HashMap<String, Integer>),
       // get its raw type (HashMap.class) for the implementation check
       typeForImplCheck = ((ParameterizedType) fieldType).getRawType();
     }
@@ -75,9 +83,9 @@ public class MapFieldParser implements TypeParser {
       mapImpl = ClassName.get(java.util.LinkedHashMap.class);
     }
 
-    String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
-    String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");
-    String keyVar = ParserCommonUtils.getVariableNameForLevel(level, "Key");
+    final String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
+    final String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");
+    final String keyVar = ParserCommonUtils.getVariableNameForLevel(level, "Key");
 
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONObjectHandle(), objVar, accessExpression);
 
@@ -86,13 +94,13 @@ public class MapFieldParser implements TypeParser {
     code.add("$L.keySet().forEach($L -> {\n", objVar, keyVar)
         .indent();
 
-    CodeBlock valueAccessExpression = ParserCommonUtils.createFieldAccessCode(
+    final CodeBlock valueAccessExpression = ParserCommonUtils.createFieldAccessCode(
         valueType,
         objVar,
         CodeBlock.of("$L", keyVar));
 
-    Type valueFieldType = getValueTypeFromMapType(fieldType);
-    String valueVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
+    final Type valueFieldType = getValueTypeFromMapType(fieldType);
+    final String valueVarName = ParserWriterUtils.dispatchGenerateParsingCodeInto(
         code,
         valueType,
         objVar,
@@ -103,7 +111,7 @@ public class MapFieldParser implements TypeParser {
 
     // Introduce intermediate key variable specifically for Enum keys
     if (keyType instanceof Class<?> && ((Class<?>) keyType).isEnum()) {
-      String enumKeyVar = ParserCommonUtils.getVariableNameForLevel(level, "EnumKey");
+      final String enumKeyVar = ParserCommonUtils.getVariableNameForLevel(level, "EnumKey");
       code.addStatement("final $T $L = $T.valueOf($L)", keyType, enumKeyVar, keyType, keyVar);
       code.addStatement("$L.put($L, $L)", mapVar, enumKeyVar, valueVarName); // Use intermediate variable
     } else {
@@ -117,7 +125,7 @@ public class MapFieldParser implements TypeParser {
     return mapVar;
   }
 
-  private void addPutStatement(CodeBlock.Builder code, String mapVar, Type keyType, String keyVar, String valueVar) {
+  private void addPutStatement(final CodeBlock.Builder code, final String mapVar, final Type keyType, final String keyVar, final String valueVar) {
     CodeBlock keyExpression = CodeBlock.of("$L", keyVar); // Default to using the string key directly
 
     if (keyType.equals(Integer.class)) {
@@ -129,19 +137,19 @@ public class MapFieldParser implements TypeParser {
       keyExpression = CodeBlock.of("$T.valueOf($L)", keyType, keyVar);
     } else if (keyType instanceof Class<?>) {
       // Check for complex key type with a fromStringValue method (like TestComplexKeyType)
-      Class<?> keyClass = (Class<?>) keyType;
+      final Class<?> keyClass = (Class<?>) keyType;
       try {
         // Look for a static method named "fromStringValue" that accepts a String
-        java.lang.reflect.Method fromStringMethod = keyClass.getMethod("fromStringValue", String.class);
+        final java.lang.reflect.Method fromStringMethod = keyClass.getMethod("fromStringValue", String.class);
         if (java.lang.reflect.Modifier.isStatic(fromStringMethod.getModifiers()) &&
             keyClass.isAssignableFrom(fromStringMethod.getReturnType())) {
           keyExpression = CodeBlock.of("$T.fromStringValue($L)", keyType, keyVar);
         }
-      } catch (NoSuchMethodException e) {
+      } catch (final NoSuchMethodException e) {
         // Method not found, continue to default
-      } catch (SecurityException e) {
+      } catch (final SecurityException e) {
         // Cannot access method, log or handle
-        System.err.println("Warning: SecurityException while checking for fromStringValue method on " + keyClass.getName());
+        logger.warn("Warning: SecurityException while checking for fromStringValue method on " + keyClass.getName());
       }
     }
 
@@ -150,17 +158,17 @@ public class MapFieldParser implements TypeParser {
     code.addStatement("$L.put($L, $L)", mapVar, keyExpression, valueVar);
   }
 
-  private Type getValueTypeFromMapType(Type mapFieldType) {
+  private Type getValueTypeFromMapType(final Type mapFieldType) {
     if (mapFieldType instanceof ParameterizedType) {
-      ParameterizedType pt = (ParameterizedType) mapFieldType;
+      final ParameterizedType pt = (ParameterizedType) mapFieldType;
       if (Map.class.isAssignableFrom((Class<?>) pt.getRawType())) {
-        Type[] typeArgs = pt.getActualTypeArguments();
+        final Type[] typeArgs = pt.getActualTypeArguments();
         if (typeArgs.length == 2) {
           return typeArgs[1];
         }
       }
     }
-    System.err.println("Warning: Could not extract value type from map type: " + mapFieldType.getTypeName());
+    logger.warn("Warning: Could not extract value type from map type: " + mapFieldType.getTypeName());
     return Object.class;
   }
 }

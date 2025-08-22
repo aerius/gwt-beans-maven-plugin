@@ -32,7 +32,7 @@ class GeneratedParserValidationTest extends ParserGeneratorTestBase {
   void generateAllParsers() throws IOException {
     System.out.println("Generating parsers before test factory execution...");
     generateParser(TestRootObjectType.class, getCustomParserDir().toString());
-      System.out.println("Parser generation complete.");
+    System.out.println("Parser generation complete.");
   }
 
   @TestFactory
@@ -40,24 +40,24 @@ class GeneratedParserValidationTest extends ParserGeneratorTestBase {
     System.out.println("Creating dynamic tests for parser comparison...");
 
     // Get all expected parser files
-    List<Path> expectedParserFiles = Files.list(expectedDir)
+    final List<Path> expectedParserFiles = Files.walk(expectedDir)
         .filter(Files::isRegularFile)
         .filter(path -> path.toString().endsWith("Parser.java"))
         .sorted() // Sort for consistent test order
         .collect(Collectors.toList());
 
     // Verify that generated directory exists and is not empty (basic check)
-    Assertions.assertTrue(Files.exists(outputDir) && Files.list(outputDir).findAny().isPresent(),
+    Assertions.assertTrue(Files.exists(outputDir) && Files.walk(outputDir).findAny().isPresent(),
         "Generated parser directory should exist and contain files after generation.");
 
     // Create a dynamic test for each expected parser file
     return expectedParserFiles.stream().map(expectedFile -> {
-      String fileName = expectedFile.getFileName().toString();
-      String className = fileName.replace("Parser.java", "");
+      final String fileName = expectedFile.getFileName().toString();
+      final String className = fileName.replace("Parser.java", "");
 
       return DynamicTest.dynamicTest("Compare parser: " + className, () -> {
         System.out.println("Executing dynamic test for: " + className);
-        String expectedContent = getExpectedParserContent(className);
+        final String expectedContent = getExpectedParserContent(className);
         // Assert that the generated parser matches the expected parser
         // This call will now fail with a detailed diff (after we modify the base class)
         assertGeneratedParserMatches(className, expectedContent);
