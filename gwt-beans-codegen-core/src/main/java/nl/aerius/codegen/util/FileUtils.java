@@ -43,7 +43,7 @@ public final class FileUtils {
         .enableClassInfo()
         .acceptPackages("nl.aerius", "nl.overheid.aerius")
         .scan()) {
-      return (List<Class<?>>) scanResult
+      return scanResult
           .getSubclasses(baseClass.getName())
           .loadClasses();
     }
@@ -81,7 +81,7 @@ public final class FileUtils {
         final ParameterizedType paramType = (ParameterizedType) field.getGenericType();
         final Type[] typeArgs = paramType.getActualTypeArguments();
         // Process both key and value types
-        for (Type typeArg : typeArgs) {
+        for (final Type typeArg : typeArgs) {
           if (typeArg instanceof Class<?>) {
             typeProcessor.accept(typeArg);
           } else if (typeArg instanceof ParameterizedType) {
@@ -104,7 +104,7 @@ public final class FileUtils {
 
     if (Map.class.isAssignableFrom((Class<?>) rawType)) {
       // Process both key and value types
-      for (Type typeArg : type.getActualTypeArguments()) {
+      for (final Type typeArg : type.getActualTypeArguments()) {
         if (typeArg instanceof Class<?>) {
           typeProcessor.accept(typeArg);
         } else if (typeArg instanceof ParameterizedType) {
@@ -121,7 +121,7 @@ public final class FileUtils {
     }
   }
 
-  public static Optional<CompilationUnit> findAndParseFile(final String sourceRoot, final String fileName) {
+  public static Optional<CompilationUnit> findAndParseFile(final String sourceRoot, final String fileName, final Logger logger) {
     try {
       final File sourceDir = new File(sourceRoot);
       if (sourceDir.exists() && sourceDir.isDirectory()) {
@@ -137,13 +137,13 @@ public final class FileUtils {
           }
         }
       }
-    } catch (IOException e) {
-      System.out.println("Error finding/parsing file " + fileName + ": " + e.getMessage());
+    } catch (final IOException e) {
+      logger.warn("Error finding/parsing file " + fileName + ": " + e.getMessage());
     }
     return Optional.empty();
   }
 
-  public static <T> Optional<String> findClassFile(final String sourceRoot, final Class<T> clazz) {
+  public static <T> Optional<String> findClassFile(final String sourceRoot, final Class<T> clazz, final Logger logger) {
     final String relativePath = clazz.getName().replace('.', '/') + ".java";
 
     try {
@@ -157,13 +157,13 @@ public final class FileUtils {
               .findFirst();
         }
       }
-    } catch (IOException e) {
-      System.out.println("Error finding class file for " + clazz.getName() + ": " + e.getMessage());
+    } catch (final IOException e) {
+      logger.warn("Error finding class file for " + clazz.getName() + ": " + e.getMessage());
     }
     return Optional.empty();
   }
 
-  public static List<Path> findAllMatchingFiles(final String sourceRoot, final String fileName) {
+  public static List<Path> findAllMatchingFiles(final String sourceRoot, final String fileName, final Logger logger) {
     try {
       final File sourceDir = new File(sourceRoot);
       if (sourceDir.exists() && sourceDir.isDirectory()) {
@@ -175,19 +175,14 @@ public final class FileUtils {
               .collect(Collectors.toList());
         }
       }
-    } catch (IOException e) {
-      System.out.println("Error finding files " + fileName + ": " + e.getMessage());
+    } catch (final IOException e) {
+      logger.warn("Error finding files " + fileName + ": " + e.getMessage());
     }
     return List.of();
   }
 
-  public static String getSourceRoot() {
-    final String cwd = System.getProperty("user.dir");
-    return new File(cwd).getParentFile().getParentFile().getParentFile().getAbsolutePath();
-  }
-
   public static String getWuiClientOutputDir() {
-    String cwd = System.getProperty("user.dir");
+    final String cwd = System.getProperty("user.dir");
     return new File(cwd).getParentFile().getAbsolutePath() + "/src/main/java";
   }
 

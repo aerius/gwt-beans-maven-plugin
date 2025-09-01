@@ -154,7 +154,7 @@ fi
 echo "Running GWT Bean Parser Generator..."
 echo "Debug: Running with arguments: ${GENERATOR_ARGS[@]}"
 echo "Debug: Passing system properties: -Dgenerator.version='$GENERATOR_VERSION' -Dgenerator.githash='$GENERATOR_GIT_HASH'"
-java -Dgenerator.version="$GENERATOR_VERSION" -Dgenerator.githash="$GENERATOR_GIT_HASH" -cp "$FULL_CP:$GENERATOR_JAR" nl.aerius.codegen.ParserGenerator "${GENERATOR_ARGS[@]}"
+java -Dgenerator.version="$GENERATOR_VERSION" -Dgenerator.githash="$GENERATOR_GIT_HASH" -cp "$FULL_CP:$GENERATOR_JAR" nl.aerius.codegen.Main "${GENERATOR_ARGS[@]}"
 # --- End Modified java command ---
 
 echo "Parser generation completed successfully!"

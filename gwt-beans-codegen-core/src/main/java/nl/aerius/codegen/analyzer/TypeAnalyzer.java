@@ -24,7 +24,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.palantir.javapoet.ClassName;
 
+import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.FileUtils;
+import nl.aerius.codegen.util.Logger;
 
 /**
  * Analyzes classes using reflection to discover and categorize types within a
@@ -40,8 +42,12 @@ public class TypeAnalyzer {
   private final Set<ClassName> discoveredTypes;
   private final Set<String> printedTypes = new HashSet<>();
   private final Set<String> customParserTypes = new HashSet<>();
+  private final ClassFinder classFinder;
+  private final Logger logger;
 
-  public TypeAnalyzer() {
+  public TypeAnalyzer(final ClassFinder classFinder, final Logger logger) {
+    this.classFinder = classFinder;
+    this.logger = logger;
     primitiveWrappers = new HashSet<>();
     primitiveWrappers.add(String.class);
     primitiveWrappers.add(Integer.class);
@@ -83,7 +89,7 @@ public class TypeAnalyzer {
    *
    * @param customParserTypes The set of type names that have custom parsers
    */
-  public void setCustomParserTypes(Set<String> customParserTypes) {
+  public void setCustomParserTypes(final Set<String> customParserTypes) {
     this.customParserTypes.clear();
     if (customParserTypes != null) {
       this.customParserTypes.addAll(customParserTypes);
@@ -92,7 +98,7 @@ public class TypeAnalyzer {
 
   public Set<ClassName> analyzeClass(final String className) {
     try {
-      final Class<?> rootClass = Class.forName(className);
+      final Class<?> rootClass = classFinder.forName(className);
       processedTypes.clear();
       skippedTypes.clear();
       discoveredTypes.clear();
@@ -101,13 +107,12 @@ public class TypeAnalyzer {
       analyzeTypeAndSubtypes(rootClass);
 
       if (!skippedTypes.isEmpty()) {
-        System.out.println("\nWarning: The following types were not found and skipped:");
-        skippedTypes.forEach(type -> System.out.println("  - " + type));
-        System.out.println();
+        logger.info("Warning: The following types were not found and skipped:");
+        skippedTypes.forEach(type -> logger.info("  - " + type));
       }
 
       return discoveredTypes;
-    } catch (ClassNotFoundException e) {
+    } catch (final ClassNotFoundException e) {
       throw new IllegalArgumentException("Could not find class: " + className, e);
     }
   }
@@ -132,34 +137,34 @@ public class TypeAnalyzer {
     if (!hasCustomParser(type)) {
       addTypeForGeneration(type);
     } else {
-      System.out.println("Skipping parser generation for " + type.getName() + " (has custom parser)");
+      logger.info("Skipping parser generation for " + type.getName() + " (has custom parser)");
     }
 
     // Find and process superclasses
-    Class<?> superclass = type.getSuperclass();
+    final Class<?> superclass = type.getSuperclass();
     if (superclass != null && superclass != Object.class) {
       analyzeTypeAndSubtypes(superclass);
     }
 
-    JsonSubTypes subTypesAnnotation = type.getAnnotation(JsonSubTypes.class);
-    JsonTypeInfo typeInfoAnnotation = type.getAnnotation(JsonTypeInfo.class); // Check presence of base annotation too
+    final JsonSubTypes subTypesAnnotation = type.getAnnotation(JsonSubTypes.class);
+    final JsonTypeInfo typeInfoAnnotation = type.getAnnotation(JsonTypeInfo.class); // Check presence of base annotation too
 
     if (subTypesAnnotation != null && typeInfoAnnotation != null) { // Only process if both are present
-      System.out.println("Found @JsonSubTypes on: " + type.getName() + ", analyzing listed subtypes...");
-      for (JsonSubTypes.Type subType : subTypesAnnotation.value()) {
-        Class<?> subTypeValue = subType.value();
-        System.out.println("  - Analyzing subtype: " + subTypeValue.getName());
+      logger.info("Found @JsonSubTypes on: " + type.getName() + ", analyzing listed subtypes...");
+      for (final JsonSubTypes.Type subType : subTypesAnnotation.value()) {
+        final Class<?> subTypeValue = subType.value();
+        logger.info("  - Analyzing subtype: " + subTypeValue.getName());
         analyzeTypeAndSubtypes(subTypeValue); // Recursive call for the subtype
       }
     }
 
     // Always analyze fields, even for types with custom parsers
     // This ensures we discover all types that might need parsers
-    for (Field field : type.getDeclaredFields()) {
+    for (final Field field : type.getDeclaredFields()) {
       if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
         try {
           analyzeField(field);
-        } catch (TypeNotPresentException e) {
+        } catch (final TypeNotPresentException e) {
           skippedTypes.add(e.typeName());
         }
       }
@@ -168,15 +173,15 @@ public class TypeAnalyzer {
 
   private void analyzeField(final Field field) {
     // Check if the field type is unsupported
-    Class<?> fieldType = field.getType();
+    final Class<?> fieldType = field.getType();
     if (isUnsupportedType(fieldType)) {
       throw new UnsupportedTypeException(fieldType, field.getName(), field.getDeclaringClass());
     }
 
     // Check for unsupported generic types
     if (field.getGenericType() instanceof ParameterizedType) {
-      ParameterizedType paramType = (ParameterizedType) field.getGenericType();
-      for (Type typeArg : paramType.getActualTypeArguments()) {
+      final ParameterizedType paramType = (ParameterizedType) field.getGenericType();
+      for (final Type typeArg : paramType.getActualTypeArguments()) {
         if (typeArg instanceof Class<?> && isUnsupportedType((Class<?>) typeArg)) {
           throw new UnsupportedTypeException(
               ((Class<?>) typeArg).getName(),
@@ -188,16 +193,16 @@ public class TypeAnalyzer {
 
     // Check if the field type contains interfaces - include them for validation
     if (containsInterface(field.getGenericType())) {
-      String fieldTypeName = field.getGenericType().getTypeName();
-      System.out.println("INFO: Field '" + field.getName() + "' in " + field.getDeclaringClass().getSimpleName() +
+      final String fieldTypeName = field.getGenericType().getTypeName();
+      logger.info("INFO: Field '" + field.getName() + "' in " + field.getDeclaringClass().getSimpleName() +
           " contains interface type arguments: " + fieldTypeName);
       // Don't skip - let validation handle interface requirements
     }
 
     // Check if the field type contains wildcards (which will be skipped during parser generation)
     if (containsWildcard(field.getGenericType())) {
-      String fieldTypeName = field.getGenericType().getTypeName();
-      System.err.println("WARN: Field '" + field.getName() + "' in " + field.getDeclaringClass().getSimpleName() +
+      final String fieldTypeName = field.getGenericType().getTypeName();
+      logger.warn("WARN: Field '" + field.getName() + "' in " + field.getDeclaringClass().getSimpleName() +
           " contains wildcard type arguments and will be skipped during parser generation: " + fieldTypeName);
       skippedTypes.add(fieldTypeName);
       return; // Skip further analysis of this field
@@ -206,9 +211,9 @@ public class TypeAnalyzer {
     FileUtils.analyzeFieldType(field, this::analyzeType);
   }
 
-  private void analyzeType(Type type) {
+  private void analyzeType(final Type type) {
     if (type instanceof Class<?>) {
-      Class<?> classType = (Class<?>) type;
+      final Class<?> classType = (Class<?>) type;
       if (isUnsupportedType(classType)) {
         throw new UnsupportedTypeException(classType.getName(), "type parameter/element", Object.class);
       }
@@ -220,7 +225,7 @@ public class TypeAnalyzer {
         analyzeTypeAndSubtypes((Class<?>) paramType.getRawType());
       }
       // Analyze all type arguments recursively
-      for (Type typeArg : paramType.getActualTypeArguments()) {
+      for (final Type typeArg : paramType.getActualTypeArguments()) {
         if (typeArg instanceof Class<?> && isUnsupportedType((Class<?>) typeArg)) {
           throw new UnsupportedTypeException(((Class<?>) typeArg).getName(), "type parameter/element", Object.class);
         }
@@ -231,11 +236,11 @@ public class TypeAnalyzer {
 
   /**
    * Checks if a type is explicitly unsupported by the parser generator.
-   * 
+   *
    * @param type The type to check
    * @return true if the type is unsupported, false otherwise
    */
-  private boolean isUnsupportedType(Class<?> type) {
+  private boolean isUnsupportedType(final Class<?> type) {
     return unsupportedTypes.stream()
         .anyMatch(unsupported -> unsupported.getName().equals(type.getName()));
   }
@@ -243,17 +248,17 @@ public class TypeAnalyzer {
   /**
    * Checks if the given type or its type arguments contain an interface.
    * Recursively checks parameterized types.
-   * 
+   *
    * @param type The type to check
    * @return true if the type contains an interface, false otherwise
    */
-  private boolean containsInterface(Type type) {
+  private boolean containsInterface(final Type type) {
     if (type instanceof Class<?>) {
       return ((Class<?>) type).isInterface();
     }
     if (type instanceof ParameterizedType) {
-      ParameterizedType pt = (ParameterizedType) type;
-      for (Type arg : pt.getActualTypeArguments()) {
+      final ParameterizedType pt = (ParameterizedType) type;
+      for (final Type arg : pt.getActualTypeArguments()) {
         if (containsInterface(arg)) {
           return true;
         }
@@ -265,17 +270,17 @@ public class TypeAnalyzer {
   /**
    * Checks if the given type or its type arguments contain a wildcard.
    * Recursively checks parameterized types.
-   * 
+   *
    * @param type The type to check
    * @return true if the type contains a wildcard, false otherwise
    */
-  private boolean containsWildcard(Type type) {
+  private boolean containsWildcard(final Type type) {
     if (type instanceof java.lang.reflect.WildcardType) {
       return true;
     }
     if (type instanceof ParameterizedType) {
-      ParameterizedType pt = (ParameterizedType) type;
-      for (Type arg : pt.getActualTypeArguments()) {
+      final ParameterizedType pt = (ParameterizedType) type;
+      for (final Type arg : pt.getActualTypeArguments()) {
         if (containsWildcard(arg)) {
           return true;
         }
@@ -320,9 +325,9 @@ public class TypeAnalyzer {
   }
 
   private boolean hasCustomParser(final Class<?> type) {
-    boolean hasParser = customParserTypes.contains(type.getSimpleName());
+    final boolean hasParser = customParserTypes.contains(type.getSimpleName());
     if (hasParser) {
-      System.out.println("Found custom parser for type: " + type.getName());
+      logger.info("Found custom parser for type: " + type.getName());
     }
     return hasParser;
   }
@@ -332,7 +337,7 @@ public class TypeAnalyzer {
       return;
     }
 
-    StringBuilder hierarchy = new StringBuilder();
+    final StringBuilder hierarchy = new StringBuilder();
     Class<?> current = type;
     int length = 0;
     while (current != null && current != Object.class) {
@@ -343,9 +348,9 @@ public class TypeAnalyzer {
       current = current.getSuperclass();
       length++;
     }
-    
+
     if (length > 1) {
-      System.out.println("Class hierarchy: " + hierarchy);
+      logger.info("Class hierarchy: " + hierarchy);
     }
   }
 }

@@ -52,19 +52,18 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
   /**
    * Cleans a directory by deleting all files in it.
    * If the directory doesn't exist, it will be created.
-   * 
+   *
    * @param directory The directory to clean
    */
-  private void cleanDirectory(File directory) throws IOException {
+  private void cleanDirectory(final File directory) throws IOException {
     if (directory.exists()) {
       // Delete all files in the directory
-      File[] files = directory.listFiles();
+      final File[] files = directory.listFiles();
+
       if (files != null) {
-        for (File file : files) {
-          if (file.isFile()) {
-            if (!file.delete()) {
-              throw new IOException("Failed to delete file: " + file.getAbsolutePath());
-            }
+        for (final File file : files) {
+          if (file.isFile() && !file.delete()) {
+            throw new IOException("Failed to delete file: " + file.getAbsolutePath());
           }
         }
       }
@@ -76,28 +75,28 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
   /**
    * Compiles all parser files in the output directory and loads the specified
    * parser class.
-   * 
+   *
    * @param className The simple name of the parser class to load (without
    *                  package)
    * @return The loaded parser class
    */
-  protected Class<?> compileAndLoadParser(String className) throws Exception {
+  protected Class<?> compileAndLoadParser(final String className) throws Exception {
     // Get the Java compiler
-    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
+    final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    final StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
 
     // Find all generated parser files
-    List<File> parserFiles = new ArrayList<>(Files.list(outputDir.toPath())
+    final List<File> parserFiles = new ArrayList<>(Files.walk(outputDir.toPath())
         .filter(path -> path.toString().endsWith(".java"))
         .map(Path::toFile)
         .collect(Collectors.toList()));
 
     // Add custom parser files that don't already exist in the generated directory
     if (customDir.exists() && customDir.isDirectory()) {
-      File[] customFiles = customDir.listFiles((dir, name) -> name.endsWith(".java"));
+      final File[] customFiles = customDir.listFiles((dir, name) -> name.endsWith(".java"));
       if (customFiles != null) {
-        for (File customFile : customFiles) {
-          File generatedFile = new File(outputDir, customFile.getName());
+        for (final File customFile : customFiles) {
+          final File generatedFile = new File(outputDir, customFile.getName());
           if (!generatedFile.exists()) {
             parserFiles.add(customFile);
           }
@@ -111,21 +110,21 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
 
     // Before compiling, replace GWT JSON imports with test implementation in all
     // files
-    for (File file : parserFiles) {
-      String content = Files.readString(file.toPath());
-      String updatedContent = ParserTestUtils.replaceJsonImportsForTesting(content);
+    for (final File file : parserFiles) {
+      final String content = Files.readString(file.toPath());
+      final String updatedContent = ParserTestUtils.replaceJsonImportsForTesting(content);
       Files.writeString(file.toPath(), updatedContent);
     }
 
     // Get the classpath including the json-utils module
-    String classpath = System.getProperty("java.class.path");
+    final String classpath = System.getProperty("java.class.path");
 
     // Compile all parsers together
-    List<String> options = Arrays.asList(
+    final List<String> options = Arrays.asList(
         "-d", outputDir.getAbsolutePath(),
         "-cp", classpath);
 
-    boolean success = compiler.getTask(null, fileManager, null, options, null,
+    final boolean success = compiler.getTask(null, fileManager, null, options, null,
         fileManager.getJavaFileObjectsFromFiles(parserFiles)).call();
 
     if (!success) {
@@ -133,46 +132,46 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
     }
 
     // Load the requested class
-    URLClassLoader classLoader = new URLClassLoader(new URL[] { outputDir.toURI().toURL() });
+    final URLClassLoader classLoader = new URLClassLoader(new URL[] {outputDir.toURI().toURL()});
     return Class.forName(PARSER_PACKAGE + "." + className, true, classLoader);
   }
 
   /**
    * Finds the appropriate parser class for the given object type.
-   * 
+   *
    * @param objectType The type of object to find a parser for
    * @return The parser class
    */
-  protected Class<?> findParserForType(Class<?> objectType) throws Exception {
-    String parserClassName = objectType.getSimpleName() + "Parser";
+  protected Class<?> findParserForType(final Class<?> objectType) throws Exception {
+    final String parserClassName = objectType.getSimpleName() + "Parser";
     return compileAndLoadParser(parserClassName);
   }
 
   /**
    * Asserts that the object can be serialized to JSON, parsed by the parser, and
    * serialized back to JSON with the same content.
-   * 
+   *
    * @param original    The original object
    * @param parserClass The parser class
    */
-  protected void assertRoundTrip(Object original, Class<?> parserClass) throws Exception {
+  protected void assertRoundTrip(final Object original, final Class<?> parserClass) throws Exception {
     // Serialize original object to JSON
-    String originalJson = objectMapper.writeValueAsString(original);
+    final String originalJson = objectMapper.writeValueAsString(original);
     System.out.println("Original JSON: " + originalJson);
 
     // Find the parse method that takes a String
-    Method parseMethod = parserClass.getMethod("parse", String.class);
+    final Method parseMethod = parserClass.getMethod("parse", String.class);
 
     // Parse JSON using our parser
-    Object parsed = parseMethod.invoke(null, originalJson);
+    final Object parsed = parseMethod.invoke(null, originalJson);
 
     // Serialize the parsed object back to JSON
-    String parsedJson = objectMapper.writeValueAsString(parsed);
+    final String parsedJson = objectMapper.writeValueAsString(parsed);
     System.out.println("  Parsed JSON: " + parsedJson);
 
     // Compare the JSON trees to ignore formatting differences
-    JsonNode originalTree = objectMapper.readTree(originalJson);
-    JsonNode parsedTree = objectMapper.readTree(parsedJson);
+    final JsonNode originalTree = objectMapper.readTree(originalJson);
+    final JsonNode parsedTree = objectMapper.readTree(parsedJson);
 
     assertEquals(
         originalTree,
