@@ -25,7 +25,7 @@
   <parent>
     <groupId>nl.aerius</groupId>
     <artifactId>gwt-beans-codegen</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
   </parent>
 
   <artifactId>gwt-beans-codegen-maven-plugin</artifactId>
@@ -45,7 +45,7 @@
     <dependency>
       <groupId>nl.aerius</groupId>
       <artifactId>gwt-beans-codegen-core</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>1.0.1</version>
     </dependency>
 
     <!-- Maven plugin dependencies -->
