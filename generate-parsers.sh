@@ -106,7 +106,7 @@ echo "Debug: Captured Generator Version: '$GENERATOR_VERSION'"
 
 echo "Debug: Attempting to get git hash..."
 # Use N/A as default
-GENERATOR_GIT_HASH=$(cd "$GENERATOR_CORE_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "N/A")
+GENERATOR_GIT_HASH=$(cd "$GENERATOR_CORE_DIR" && git rev-parse --short=10 HEAD 2>/dev/null || echo "N/A")
 GIT_EXIT_CODE=$?
 echo "Debug: git rev-parse exit code: $GIT_EXIT_CODE"
 # Trim potential whitespace/newlines
