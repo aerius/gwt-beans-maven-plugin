@@ -451,7 +451,15 @@ public class ConfigurationValidator {
     try {
       // Check if this is a Map field
       if (Map.class.isAssignableFrom(field.getType())) {
-        final Type[] genericTypes = ((ParameterizedType) field.getGenericType()).getActualTypeArguments();
+        final Type genericType = field.getGenericType();
+
+        // If the field type is not parameterized directly (e.g., MyMap extends HashMap<K,V>),
+        // skip the map key validation as we can't determine the key type from the field
+        if (!(genericType instanceof ParameterizedType)) {
+          return fieldTypeIsValid;
+        }
+
+        final Type[] genericTypes = ((ParameterizedType) genericType).getActualTypeArguments();
         final Type keyType = genericTypes[0];
 
         // Skip primitive types, their wrappers, String, and enums as they don't need

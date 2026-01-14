@@ -8,7 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.lang.model.element.Modifier;
 
@@ -20,6 +22,8 @@ import com.palantir.javapoet.JavaFile;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeSpec;
 
+import nl.aerius.codegen.analyzer.ConstructorAnalyzer;
+import nl.aerius.codegen.analyzer.ConstructorAnalyzer.ConstructorInfo;
 import nl.aerius.codegen.generator.parser.CollectionFieldParser;
 import nl.aerius.codegen.generator.parser.CustomObjectFieldParser;
 import nl.aerius.codegen.generator.parser.EnumFieldParser;
@@ -61,8 +65,22 @@ public final class ParserWriterUtils {
   private static TypeParser collectionFieldParser;
   private static TypeParser mapFieldParser;
 
+  // Constructor analyzer for detecting constructor-based parsing
+  private static ConstructorAnalyzer constructorAnalyzer;
+
   private ParserWriterUtils() {
     // Utility class, no instantiation
+  }
+
+  /**
+   * Sets the source roots for constructor analysis.
+   * Must be called before generating parsers for constructor-based types.
+   *
+   * @param sourceRoots List of source root directories to search for source files
+   * @param logger Logger instance for messages
+   */
+  public static void setSourceRoots(final List<String> sourceRoots, final Logger logger) {
+    constructorAnalyzer = new ConstructorAnalyzer(sourceRoots, logger);
   }
 
   public static void initParsers(final ClassFinder classFinder, final Logger logger) {
@@ -102,18 +120,40 @@ public final class ParserWriterUtils {
   /**
    * Main entry point for generating a parser class.
    * Creates both parse(String) and parse(JSONObjectHandle) methods.
+   * For constructor-based types (no setters), generates constructor-based parse method.
    * @param classFinder
    */
   public static void generateParserForFields(final TypeSpec.Builder typeSpec, final Class<?> targetClass, final String parserPackage,
       final ClassFinder classFinder) {
     typeSpec.addMethod(createStringParseMethod(targetClass));
-    // Decide which kind of object parse method to generate based on polymorphism
-    if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
-      typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
+
+    // Check if this class should use constructor-based parsing
+    final Optional<ConstructorInfo> constructorInfo = findConstructorInfo(targetClass);
+
+    if (constructorInfo.isPresent()) {
+      // Constructor-based: single parse method that constructs the object
+      typeSpec.addMethod(createConstructorBasedParseMethod(targetClass, parserPackage, classFinder, constructorInfo.get()));
+      // No config-based parse method for immutable types
     } else {
-      typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
+      // Setter-based: existing approach
+      // Decide which kind of object parse method to generate based on polymorphism
+      if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
+        typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
+      } else {
+        typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
+      }
+      typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage, classFinder));
     }
-    typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage, classFinder));
+  }
+
+  /**
+   * Finds constructor info for a class, if constructor-based parsing is available.
+   */
+  private static Optional<ConstructorInfo> findConstructorInfo(final Class<?> targetClass) {
+    if (constructorAnalyzer == null) {
+      return Optional.empty();
+    }
+    return constructorAnalyzer.findMatchingConstructorInfo(targetClass);
   }
 
   /**
@@ -322,6 +362,103 @@ public final class ParserWriterUtils {
     methodBuilder.endControlFlow(); // End switch
 
     return methodBuilder.build();
+  }
+
+  /**
+   * Creates a constructor-based parse method for immutable types.
+   * Parses all fields into local variables and then calls the constructor.
+   */
+  private static MethodSpec createConstructorBasedParseMethod(final Class<?> targetClass, final String parserPackage,
+      final ClassFinder classFinder, final ConstructorInfo constructorInfo) {
+    final ClassName targetClassName = ClassName.get(targetClass);
+    final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+        .returns(targetClassName)
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, Modifier.FINAL);
+
+    methodBuilder.beginControlFlow("if ($L == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
+        .addStatement("return null")
+        .endControlFlow();
+
+    // Get fields in constructor parameter order
+    final List<Field> fieldsInOrder = constructorInfo.getFieldsInConstructorOrder();
+    final List<String> paramNames = constructorInfo.getParameterNames();
+
+    // Parse each field into a local variable with the field's name
+    for (final Field field : fieldsInOrder) {
+      methodBuilder.addCode("\n");
+      methodBuilder.addComment("Parse $L", field.getName());
+
+      // Check if field is required (must exist in JSON)
+      methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
+          .addStatement("throw new $T($S)", RuntimeException.class,
+              "Required field '" + field.getName() + "' is missing")
+          .endControlFlow();
+
+      final Class<?> fieldClass = field.getType();
+      final boolean isPrimitive = fieldClass.isPrimitive();
+      final String fieldName = field.getName();
+
+      if (isPrimitive) {
+        // Primitives can be parsed directly (no null check needed)
+        final CodeBlock getter = createSimpleGetter(fieldClass, fieldName);
+        methodBuilder.addStatement("final $T $L = $L", fieldClass, fieldName, getter);
+      } else {
+        // Non-primitives need null handling
+        methodBuilder.addStatement("final $T $L", fieldClass, fieldName);
+        methodBuilder.beginControlFlow("if (!$L.isNull($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+        final CodeBlock getter = createSimpleGetter(fieldClass, fieldName);
+        methodBuilder.addStatement("$L = $L", fieldName, getter);
+        methodBuilder.nextControlFlow("else");
+        methodBuilder.addStatement("$L = null", fieldName);
+        methodBuilder.endControlFlow();
+      }
+    }
+
+    // Build constructor call with all parameters in order
+    final StringBuilder constructorArgs = new StringBuilder();
+    for (int i = 0; i < paramNames.size(); i++) {
+      if (i > 0) {
+        constructorArgs.append(", ");
+      }
+      constructorArgs.append(paramNames.get(i));
+    }
+
+    methodBuilder.addCode("\n");
+    methodBuilder.addStatement("return new $T($L)", targetClass, constructorArgs.toString());
+
+    return methodBuilder.build();
+  }
+
+  /**
+   * Creates a simple getter expression for a field type.
+   */
+  private static CodeBlock createSimpleGetter(final Class<?> fieldClass, final String fieldName) {
+    if (fieldClass == String.class) {
+      return CodeBlock.of("$L.getString($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == int.class || fieldClass == Integer.class) {
+      return CodeBlock.of("$L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == long.class || fieldClass == Long.class) {
+      return CodeBlock.of("$L.getLong($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == double.class) {
+      return CodeBlock.of("$L.getNumber($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == Double.class) {
+      return CodeBlock.of("$L.getNumber($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == boolean.class || fieldClass == Boolean.class) {
+      return CodeBlock.of("$L.getBoolean($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == float.class || fieldClass == Float.class) {
+      return CodeBlock.of("$L.getNumber($S).floatValue()", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == byte.class || fieldClass == Byte.class) {
+      return CodeBlock.of("(byte) $L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == short.class || fieldClass == Short.class) {
+      return CodeBlock.of("(short) $L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass == char.class || fieldClass == Character.class) {
+      return CodeBlock.of("$L.getString($S).charAt(0)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else {
+      // For custom objects, delegate to their parser
+      return CodeBlock.of("$LParser.parse($L.getObject($S))",
+          fieldClass.getSimpleName(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    }
   }
 
   private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage, final ClassFinder classFinder) {

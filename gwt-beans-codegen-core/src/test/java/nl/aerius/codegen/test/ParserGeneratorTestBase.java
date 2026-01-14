@@ -45,9 +45,14 @@ public abstract class ParserGeneratorTestBase {
 
     System.out.println("Creating output directory: " + outputDir.toAbsolutePath());
     Files.createDirectories(outputDir);
-    System.out.println("=== Test Base @BeforeAll Complete ===");
 
     ParserWriterUtils.initParsers(CLASSFINDER, LOGGER);
+
+    // Set up source roots for constructor analysis
+    final List<String> sourceRoots = List.of("src/test/java", "src/main/java");
+    ParserWriterUtils.setSourceRoots(sourceRoots, LOGGER);
+
+    System.out.println("=== Test Base @BeforeAll Complete ===");
   }
 
   // Helper method remains static
