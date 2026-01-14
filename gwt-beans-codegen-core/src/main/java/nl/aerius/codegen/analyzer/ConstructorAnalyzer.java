@@ -108,6 +108,13 @@ public class ConstructorAnalyzer {
         // Find the matching reflection constructor
         final Constructor<?> matchingCtor = findMatchingReflectionConstructor(clazz, ctorDecl);
         if (matchingCtor != null) {
+          // Validate that constructor parameter types match field types
+          final String typeMismatch = validateParameterTypes(matchingCtor, paramNames, parseableFields);
+          if (typeMismatch != null) {
+            logger.warn("Constructor parameter type mismatch in " + clazz.getName() + ": " + typeMismatch);
+            continue; // Try next constructor
+          }
+
           logger.info("Found matching constructor for " + clazz.getName() +
               " with parameters: " + paramNames);
           return Optional.of(new ConstructorInfo(matchingCtor, paramNames, parseableFields));
@@ -116,6 +123,77 @@ public class ConstructorAnalyzer {
     }
 
     return Optional.empty();
+  }
+
+  /**
+   * Validates that constructor parameter types match the corresponding field types.
+   *
+   * @param ctor The constructor to validate
+   * @param paramNames The parameter names in order
+   * @param fields The list of parseable fields
+   * @return null if all types match, or an error message describing the mismatch
+   */
+  private String validateParameterTypes(final Constructor<?> ctor, final List<String> paramNames,
+      final List<Field> fields) {
+    final Class<?>[] paramTypes = ctor.getParameterTypes();
+
+    for (int i = 0; i < paramNames.size(); i++) {
+      final String paramName = paramNames.get(i);
+      final Class<?> paramType = paramTypes[i];
+
+      // Find the field with this name
+      Field matchingField = null;
+      for (final Field field : fields) {
+        if (field.getName().equals(paramName)) {
+          matchingField = field;
+          break;
+        }
+      }
+
+      if (matchingField == null) {
+        return "No field found for parameter '" + paramName + "'";
+      }
+
+      // Check if types match
+      if (!typesMatch(paramType, matchingField.getType())) {
+        return "Parameter '" + paramName + "' has type " + paramType.getSimpleName()
+            + " but field has type " + matchingField.getType().getSimpleName();
+      }
+    }
+
+    return null; // All types match
+  }
+
+  /**
+   * Checks if two types match, handling primitives and their wrappers.
+   */
+  private boolean typesMatch(final Class<?> paramType, final Class<?> fieldType) {
+    // Exact match
+    if (paramType.equals(fieldType)) {
+      return true;
+    }
+
+    // Check primitive/wrapper equivalence
+    if (paramType.isPrimitive() || fieldType.isPrimitive()) {
+      return getPrimitiveWrapper(paramType).equals(getPrimitiveWrapper(fieldType));
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns the wrapper class for a primitive, or the class itself if not primitive.
+   */
+  private Class<?> getPrimitiveWrapper(final Class<?> type) {
+    if (type == boolean.class) return Boolean.class;
+    if (type == byte.class) return Byte.class;
+    if (type == char.class) return Character.class;
+    if (type == short.class) return Short.class;
+    if (type == int.class) return Integer.class;
+    if (type == long.class) return Long.class;
+    if (type == float.class) return Float.class;
+    if (type == double.class) return Double.class;
+    return type;
   }
 
   /**
