@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
@@ -15,6 +17,7 @@ import nl.aerius.codegen.ParserGenerator;
 import nl.aerius.codegen.generator.ParserWriterUtils;
 import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.Logger;
+import nl.aerius.codegen.validator.ConfigurationValidator;
 
 // Removed TestInstance - let subclasses handle lifecycle
 public abstract class ParserGeneratorTestBase {
@@ -23,6 +26,7 @@ public abstract class ParserGeneratorTestBase {
 
   private static final ClassFinder CLASSFINDER = new ClassFinder() {};
   private static final Logger LOGGER = new Logger() {};
+  private static final List<String> SOURCE_ROOTS = List.of("src/test/java", "src/main/java");
 
   // Make paths static as they are initialized once
   protected static Path outputDir;
@@ -49,8 +53,7 @@ public abstract class ParserGeneratorTestBase {
     ParserWriterUtils.initParsers(CLASSFINDER, LOGGER);
 
     // Set up source roots for constructor analysis
-    final List<String> sourceRoots = List.of("src/test/java", "src/main/java");
-    ParserWriterUtils.setSourceRoots(sourceRoots, LOGGER);
+    ParserWriterUtils.setSourceRoots(SOURCE_ROOTS, LOGGER);
 
     System.out.println("=== Test Base @BeforeAll Complete ===");
   }
@@ -81,6 +84,8 @@ public abstract class ParserGeneratorTestBase {
   protected void generateParser(final Class<?> rootClass) throws IOException {
     if (outputDir == null)
       throw new IllegalStateException("outputDir not initialized. Ensure setUpDirectories() ran.");
+    // Validate before generating
+    validateClass(rootClass, null);
     // Call the most specific method, providing fixed generator name and details for testing
     ParserGenerator.generateParsersForClass(rootClass, TEST_PACKAGE, outputDir.toString(), null /* customParserDir */,
         "nl.aerius.codegen.ParserGenerator", CLASSFINDER, LOGGER);
@@ -89,9 +94,38 @@ public abstract class ParserGeneratorTestBase {
   protected void generateParser(final Class<?> rootClass, final String customParserDir) throws IOException {
     if (outputDir == null)
       throw new IllegalStateException("outputDir not initialized. Ensure setUpDirectories() ran.");
+    // Validate before generating
+    validateClass(rootClass, customParserDir);
     // Call the most specific method, providing fixed generator name and details for testing
     ParserGenerator.generateParsersForClass(rootClass, TEST_PACKAGE, outputDir.toString(), customParserDir, "nl.aerius.codegen.ParserGenerator",
         CLASSFINDER, LOGGER);
+  }
+
+  /**
+   * Validates a class before parser generation.
+   * This ensures tests don't bypass validation that would run in production.
+   */
+  private void validateClass(final Class<?> rootClass, final String customParserDir) {
+    final ConfigurationValidator validator = new ConfigurationValidator(CLASSFINDER, LOGGER);
+    validator.setSourceRoots(SOURCE_ROOTS);
+    if (customParserDir != null && !customParserDir.isEmpty()) {
+      // Find and register custom parsers if directory is provided
+      try (Stream<Path> files = Files.list(Path.of(customParserDir))) {
+        final Set<String> customParserTypes = files
+            .filter(path -> path.toString().endsWith("Parser.java"))
+            .map(path -> {
+              final String fileName = path.getFileName().toString();
+              return fileName.substring(0, fileName.length() - 11); // Remove "Parser.java"
+            })
+            .collect(Collectors.toSet());
+        validator.setCustomParserTypes(customParserTypes);
+      } catch (final IOException e) {
+        // Ignore - custom parser discovery is optional
+      }
+    }
+    if (!validator.validate(rootClass)) {
+      throw new IllegalStateException(rootClass.getName() + " validation failed. Please fix the issues before generating parsers.");
+    }
   }
 
   // This method modifies files, so fine as non-static if called after generation
