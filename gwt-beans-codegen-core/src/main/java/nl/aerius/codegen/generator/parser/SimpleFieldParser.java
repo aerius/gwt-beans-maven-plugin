@@ -53,11 +53,17 @@ public class SimpleFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level, Type fieldType) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType, String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("SimpleFieldParser cannot handle type: " + type.getTypeName());
     }
     Class<?> clazz = (Class<?>) type;
-    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
+    String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "value");
     String tempStringVar = ParserCommonUtils.getVariableNameForLevel(level, "str");
 
     if (clazz.equals(char.class) || clazz.equals(Character.class)) {

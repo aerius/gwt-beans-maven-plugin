@@ -24,12 +24,7 @@ public class TestConstructorBasedTypeParser {
     if (!baseObj.has("name")) {
       throw new RuntimeException("Required field 'name' is missing");
     }
-    final String name;
-    if (!baseObj.isNull("name")) {
-      name = baseObj.getString("name");
-    } else {
-      name = null;
-    }
+    final String name = baseObj.getString("name");
 
     // Parse value
     if (!baseObj.has("value")) {
@@ -41,12 +36,7 @@ public class TestConstructorBasedTypeParser {
     if (!baseObj.has("optionalValue")) {
       throw new RuntimeException("Required field 'optionalValue' is missing");
     }
-    final Double optionalValue;
-    if (!baseObj.isNull("optionalValue")) {
-      optionalValue = baseObj.getNumber("optionalValue");
-    } else {
-      optionalValue = null;
-    }
+    final Double optionalValue = baseObj.getNumber("optionalValue");
 
     return new TestConstructorBasedType(name, value, optionalValue);
   }

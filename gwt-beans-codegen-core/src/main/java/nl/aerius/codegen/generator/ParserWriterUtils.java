@@ -7,6 +7,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -382,9 +383,9 @@ public final class ParserWriterUtils {
 
     // Get fields in constructor parameter order
     final List<Field> fieldsInOrder = constructorInfo.getFieldsInConstructorOrder();
-    final List<String> paramNames = constructorInfo.getParameterNames();
+    final List<String> constructorArgVars = new ArrayList<>();
 
-    // Parse each field into a local variable with the field's name
+    // Parse each field using existing TypeParser infrastructure
     for (final Field field : fieldsInOrder) {
       methodBuilder.addCode("\n");
       methodBuilder.addComment("Parse $L", field.getName());
@@ -395,72 +396,32 @@ public final class ParserWriterUtils {
               "Required field '" + field.getName() + "' is missing")
           .endControlFlow();
 
-      final Class<?> fieldClass = field.getType();
-      final boolean isPrimitive = fieldClass.isPrimitive();
-      final String fieldName = field.getName();
+      // Create access expression for this field
+      final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
+          field.getGenericType(),
+          ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+          CodeBlock.of("$S", field.getName()));
 
-      if (isPrimitive) {
-        // Primitives can be parsed directly (no null check needed)
-        final CodeBlock getter = createSimpleGetter(fieldClass, fieldName);
-        methodBuilder.addStatement("final $T $L = $L", fieldClass, fieldName, getter);
-      } else {
-        // Non-primitives need null handling
-        methodBuilder.addStatement("final $T $L", fieldClass, fieldName);
-        methodBuilder.beginControlFlow("if (!$L.isNull($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-        final CodeBlock getter = createSimpleGetter(fieldClass, fieldName);
-        methodBuilder.addStatement("$L = $L", fieldName, getter);
-        methodBuilder.nextControlFlow("else");
-        methodBuilder.addStatement("$L = null", fieldName);
-        methodBuilder.endControlFlow();
-      }
-    }
+      // Use existing TypeParser infrastructure to generate parsing code with field name as variable name
+      final CodeBlock.Builder parseCode = CodeBlock.builder();
+      final String resultVar = dispatchGenerateParsingCodeInto(
+          parseCode,
+          field.getGenericType(),
+          ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+          parserPackage,
+          fieldAccess,
+          1,
+          field.getGenericType(),
+          field.getName()); // Pass field name as variable name
 
-    // Build constructor call with all parameters in order
-    final StringBuilder constructorArgs = new StringBuilder();
-    for (int i = 0; i < paramNames.size(); i++) {
-      if (i > 0) {
-        constructorArgs.append(", ");
-      }
-      constructorArgs.append(paramNames.get(i));
+      methodBuilder.addCode(parseCode.build());
+      constructorArgVars.add(resultVar);
     }
 
     methodBuilder.addCode("\n");
-    methodBuilder.addStatement("return new $T($L)", targetClass, constructorArgs.toString());
+    methodBuilder.addStatement("return new $T($L)", targetClass, String.join(", ", constructorArgVars));
 
     return methodBuilder.build();
-  }
-
-  /**
-   * Creates a simple getter expression for a field type.
-   */
-  private static CodeBlock createSimpleGetter(final Class<?> fieldClass, final String fieldName) {
-    if (fieldClass == String.class) {
-      return CodeBlock.of("$L.getString($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == int.class || fieldClass == Integer.class) {
-      return CodeBlock.of("$L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == long.class || fieldClass == Long.class) {
-      return CodeBlock.of("$L.getLong($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == double.class || fieldClass == Double.class) {
-      return CodeBlock.of("$L.getNumber($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == boolean.class || fieldClass == Boolean.class) {
-      return CodeBlock.of("$L.getBoolean($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == float.class || fieldClass == Float.class) {
-      return CodeBlock.of("$L.getNumber($S).floatValue()", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == byte.class || fieldClass == Byte.class) {
-      return CodeBlock.of("(byte) $L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == short.class || fieldClass == Short.class) {
-      return CodeBlock.of("(short) $L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == char.class || fieldClass == Character.class) {
-      return CodeBlock.of("$L.getString($S).charAt(0)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass.isEnum()) {
-      // Enum handling - use valueOf
-      return CodeBlock.of("$T.valueOf($L.getString($S))",
-          fieldClass, ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else {
-      // For custom objects, delegate to their parser
-      return CodeBlock.of("$LParser.parse($L.getObject($S))",
-          fieldClass.getSimpleName(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    }
   }
 
   private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage, final ClassFinder classFinder) {
@@ -555,18 +516,23 @@ public final class ParserWriterUtils {
   public static String dispatchGenerateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName,
       final String parserPackage,
       final CodeBlock accessExpression, final int level, final Type fieldType) {
+    return dispatchGenerateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  /**
+   * Dispatches parsing logic to the appropriate TypeParser with an optional variable name override.
+   */
+  public static String dispatchGenerateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName,
+      final String parserPackage, final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     for (final TypeParser parser : PARSERS) {
       if (parser.canHandle(type)) {
-        // Call 7-parameter version
-        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType);
+        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, variableName);
       }
     }
 
     // If no parser handled the type, add a placeholder or throw an error
-    final String placeholderVar = "level" + level + "UnsupportedValue";
+    final String placeholderVar = variableName != null ? variableName : "level" + level + "UnsupportedValue";
     code.addStatement("$T $L = null; // Type not supported: $L", Object.class, placeholderVar, type.getTypeName());
-    // Alternatively, throw an exception:
-    // throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
     return placeholderVar;
   }
 
