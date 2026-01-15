@@ -440,9 +440,7 @@ public final class ParserWriterUtils {
       return CodeBlock.of("$L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
     } else if (fieldClass == long.class || fieldClass == Long.class) {
       return CodeBlock.of("$L.getLong($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == double.class) {
-      return CodeBlock.of("$L.getNumber($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
-    } else if (fieldClass == Double.class) {
+    } else if (fieldClass == double.class || fieldClass == Double.class) {
       return CodeBlock.of("$L.getNumber($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
     } else if (fieldClass == boolean.class || fieldClass == Boolean.class) {
       return CodeBlock.of("$L.getBoolean($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);

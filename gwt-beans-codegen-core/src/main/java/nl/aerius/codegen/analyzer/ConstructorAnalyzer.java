@@ -304,22 +304,8 @@ public class ConstructorAnalyzer {
    * Checks if a source type name matches a reflection type.
    */
   private boolean typeNamesMatch(final String sourceTypeName, final Class<?> reflectionType) {
-    // Handle primitives
-    if (reflectionType.isPrimitive()) {
-      return sourceTypeName.equals(reflectionType.getName());
-    }
-
-    // Handle simple name match
-    if (sourceTypeName.equals(reflectionType.getSimpleName())) {
-      return true;
-    }
-
-    // Handle fully qualified name match
-    if (sourceTypeName.equals(reflectionType.getName())) {
-      return true;
-    }
-
-    return false;
+    return sourceTypeName.equals(reflectionType.getName())
+        || sourceTypeName.equals(reflectionType.getSimpleName());
   }
 
   /**
