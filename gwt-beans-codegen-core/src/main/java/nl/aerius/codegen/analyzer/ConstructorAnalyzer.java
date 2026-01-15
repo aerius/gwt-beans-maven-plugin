@@ -40,13 +40,26 @@ public class ConstructorAnalyzer {
 
   /**
    * Checks if a class can use constructor-based parsing.
-   * Returns true if there exists a constructor with parameters matching all parseable fields.
+   * Returns true if there exists a constructor with parameters matching all parseable fields
+   * AND the class is immutable (does not have setters for all fields).
    *
    * @param clazz The class to check
    * @return true if constructor-based parsing can be used
    */
   public boolean canUseConstructorBasedParsing(final Class<?> clazz) {
     return findMatchingConstructorInfo(clazz).isPresent();
+  }
+
+  /**
+   * Checks if a class has a constructor that could be used for initialization.
+   * Unlike canUseConstructorBasedParsing(), this does NOT require the class to be immutable.
+   * Used for validation to determine if a no-arg constructor is required.
+   *
+   * @param clazz The class to check
+   * @return true if a matching constructor exists
+   */
+  public boolean hasMatchingConstructor(final Class<?> clazz) {
+    return findMatchingConstructorInfo(clazz, false).isPresent();
   }
 
   /**
@@ -57,13 +70,24 @@ public class ConstructorAnalyzer {
    * @return Optional containing constructor info if a matching constructor exists and class is immutable
    */
   public Optional<ConstructorInfo> findMatchingConstructorInfo(final Class<?> clazz) {
+    return findMatchingConstructorInfo(clazz, true);
+  }
+
+  /**
+   * Finds the constructor and its parameter order for constructor-based parsing.
+   *
+   * @param clazz The class to analyze
+   * @param requireImmutable If true, only returns a match if the class lacks setters for all fields
+   * @return Optional containing constructor info if a matching constructor exists
+   */
+  private Optional<ConstructorInfo> findMatchingConstructorInfo(final Class<?> clazz, final boolean requireImmutable) {
     final List<Field> parseableFields = getParseableFields(clazz);
     if (parseableFields.isEmpty()) {
       return Optional.empty();
     }
 
-    // Check if class has setters for all fields - if yes, prefer setter-based parsing
-    if (hasSettersForAllFields(clazz, parseableFields)) {
+    // Check if class has setters for all fields - if yes and requireImmutable, prefer setter-based parsing
+    if (requireImmutable && hasSettersForAllFields(clazz, parseableFields)) {
       return Optional.empty();
     }
 

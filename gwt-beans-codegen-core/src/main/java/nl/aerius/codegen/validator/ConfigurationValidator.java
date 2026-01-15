@@ -269,9 +269,12 @@ public class ConfigurationValidator {
       logger.info("\u2139\ufe0f  " + clazz.getName() + ": Using constructor-based parsing (immutable type)");
     }
 
-    // Check for public no-args constructor (Skip for interfaces, abstract classes, and constructor-based types)
+    // Check if this class has any matching constructor (for validation purposes)
+    final boolean hasValidConstructor = !clazz.isInterface() && hasMatchingConstructor(clazz);
+
+    // Check for public no-args constructor (Skip for interfaces, abstract classes, and types with matching constructor)
     // Abstract classes can't be instantiated directly, so they don't need a public no-args constructor
-    if (!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers()) && !isConstructorBasedType) {
+    if (!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers()) && !hasValidConstructor) {
       if (!validateConstructor(clazz, treatErrorsAsWarnings)) {
         classHasIssues = true;
       }
@@ -379,6 +382,18 @@ public class ConfigurationValidator {
       return false;
     }
     return constructorAnalyzer.canUseConstructorBasedParsing(clazz);
+  }
+
+  /**
+   * Checks if a class has a constructor that could be used for initialization.
+   * Unlike canUseConstructorBasedParsing(), this does NOT require the class to be immutable.
+   * Used for validation to determine if a no-arg constructor is required.
+   */
+  private boolean hasMatchingConstructor(final Class<?> clazz) {
+    if (constructorAnalyzer == null) {
+      return false;
+    }
+    return constructorAnalyzer.hasMatchingConstructor(clazz);
   }
 
   private boolean validateField(final Class<?> clazz, final Field field, final boolean treatErrorsAsWarnings) {
