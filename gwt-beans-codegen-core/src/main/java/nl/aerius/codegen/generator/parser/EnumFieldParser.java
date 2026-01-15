@@ -45,8 +45,7 @@ public class EnumFieldParser implements TypeParser {
 
   @Override
   public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
-      final CodeBlock accessExpression,
-      final int level, final Type fieldType, final String variableName) {
+      final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("EnumFieldParser cannot handle type: " + type.getTypeName());
     }

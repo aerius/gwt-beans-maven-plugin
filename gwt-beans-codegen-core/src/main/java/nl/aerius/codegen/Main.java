@@ -16,6 +16,9 @@
  */
 package nl.aerius.codegen;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import nl.aerius.codegen.generator.ParserWriterUtils;
 import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.Logger;
@@ -61,7 +64,7 @@ public class Main {
         "  Custom parser directory: " + (options.customParserDir != null ? options.customParserDir : "not specified"));
 
     // Derive source roots from classpath if not explicitly specified
-    java.util.List<String> sourceRoots = options.sourceRoots;
+    List<String> sourceRoots = options.sourceRoots;
     if (sourceRoots.isEmpty()) {
       sourceRoots = nl.aerius.codegen.util.FileUtils.deriveSourceRootsFromClasspath();
       System.out.println("  Source roots (derived from classpath): " + sourceRoots);
@@ -157,6 +160,6 @@ public class Main {
     String outputDir;
     String parserPackage;
     String customParserDir = null;
-    java.util.List<String> sourceRoots = new java.util.ArrayList<>();
+    List<String> sourceRoots = new ArrayList<>();
   }
 }

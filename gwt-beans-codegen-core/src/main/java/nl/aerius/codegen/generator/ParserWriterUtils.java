@@ -24,7 +24,7 @@ import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeSpec;
 
 import nl.aerius.codegen.analyzer.ConstructorAnalyzer;
-import nl.aerius.codegen.analyzer.ConstructorAnalyzer.ConstructorInfo;
+import nl.aerius.codegen.analyzer.ConstructorInfo;
 import nl.aerius.codegen.generator.parser.CollectionFieldParser;
 import nl.aerius.codegen.generator.parser.CustomObjectFieldParser;
 import nl.aerius.codegen.generator.parser.EnumFieldParser;
@@ -134,17 +134,23 @@ public final class ParserWriterUtils {
     if (constructorInfo.isPresent()) {
       // Constructor-based: single parse method that constructs the object
       typeSpec.addMethod(createConstructorBasedParseMethod(targetClass, parserPackage, classFinder, constructorInfo.get()));
-      // No config-based parse method for immutable types
     } else {
       // Setter-based: existing approach
-      // Decide which kind of object parse method to generate based on polymorphism
-      if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
-        typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
-      } else {
-        typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
-      }
-      typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage, classFinder));
+      addSetterBasedParseMethods(typeSpec, targetClass, parserPackage, classFinder);
     }
+  }
+
+  /**
+   * Adds setter-based parse methods to the type specification.
+   */
+  private static void addSetterBasedParseMethods(final TypeSpec.Builder typeSpec, final Class<?> targetClass,
+      final String parserPackage, final ClassFinder classFinder) {
+    if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
+      typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
+    } else {
+      typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
+    }
+    typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage, classFinder));
   }
 
   /**
@@ -387,34 +393,7 @@ public final class ParserWriterUtils {
 
     // Parse each field using existing TypeParser infrastructure
     for (final Field field : fieldsInOrder) {
-      methodBuilder.addCode("\n");
-      methodBuilder.addComment("Parse $L", field.getName());
-
-      // Check if field is required (must exist in JSON)
-      methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
-          .addStatement("throw new $T($S)", RuntimeException.class,
-              "Required field '" + field.getName() + "' is missing")
-          .endControlFlow();
-
-      // Create access expression for this field
-      final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
-          field.getGenericType(),
-          ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
-          CodeBlock.of("$S", field.getName()));
-
-      // Use existing TypeParser infrastructure to generate parsing code with field name as variable name
-      final CodeBlock.Builder parseCode = CodeBlock.builder();
-      final String resultVar = dispatchGenerateParsingCodeInto(
-          parseCode,
-          field.getGenericType(),
-          ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
-          parserPackage,
-          fieldAccess,
-          1,
-          field.getGenericType(),
-          field.getName()); // Pass field name as variable name
-
-      methodBuilder.addCode(parseCode.build());
+      final String resultVar = generateFieldParsingCode(methodBuilder, field, parserPackage);
       constructorArgVars.add(resultVar);
     }
 
@@ -422,6 +401,42 @@ public final class ParserWriterUtils {
     methodBuilder.addStatement("return new $T($L)", targetClass, String.join(", ", constructorArgVars));
 
     return methodBuilder.build();
+  }
+
+  /**
+   * Generates parsing code for a single field in a constructor-based parser.
+   */
+  private static String generateFieldParsingCode(final MethodSpec.Builder methodBuilder, final Field field,
+      final String parserPackage) {
+    methodBuilder.addCode("\n");
+    methodBuilder.addComment("Parse $L", field.getName());
+
+    // Check if field is required (must exist in JSON)
+    methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
+        .addStatement("throw new $T($S)", RuntimeException.class,
+            "Required field '" + field.getName() + "' is missing")
+        .endControlFlow();
+
+    // Create access expression for this field
+    final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
+        field.getGenericType(),
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+        CodeBlock.of("$S", field.getName()));
+
+    // Use existing TypeParser infrastructure to generate parsing code with field name as variable name
+    final CodeBlock.Builder parseCode = CodeBlock.builder();
+    final String resultVar = dispatchGenerateParsingCodeInto(
+        parseCode,
+        field.getGenericType(),
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+        parserPackage,
+        fieldAccess,
+        1,
+        field.getGenericType(),
+        field.getName());
+
+    methodBuilder.addCode(parseCode.build());
+    return resultVar;
   }
 
   private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage, final ClassFinder classFinder) {
