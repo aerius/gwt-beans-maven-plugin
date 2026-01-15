@@ -454,6 +454,10 @@ public final class ParserWriterUtils {
       return CodeBlock.of("(short) $L.getInteger($S)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
     } else if (fieldClass == char.class || fieldClass == Character.class) {
       return CodeBlock.of("$L.getString($S).charAt(0)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
+    } else if (fieldClass.isEnum()) {
+      // Enum handling - use valueOf
+      return CodeBlock.of("$T.valueOf($L.getString($S))",
+          fieldClass, ParserCommonUtils.BASE_OBJECT_PARAM_NAME, fieldName);
     } else {
       // For custom objects, delegate to their parser
       return CodeBlock.of("$LParser.parse($L.getObject($S))",

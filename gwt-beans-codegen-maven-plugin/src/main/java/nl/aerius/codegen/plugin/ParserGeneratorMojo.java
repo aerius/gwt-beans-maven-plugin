@@ -41,6 +41,7 @@ import org.apache.maven.project.MavenProject;
 import nl.aerius.codegen.ParserGenerator;
 import nl.aerius.codegen.generator.ParserWriterUtils;
 import nl.aerius.codegen.util.ClassFinder;
+import nl.aerius.codegen.util.FileUtils;
 import nl.aerius.codegen.util.Logger;
 
 @Mojo(name = "generate-parsers", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresDependencyResolution = ResolutionScope.COMPILE)
@@ -94,9 +95,14 @@ public class ParserGeneratorMojo extends AbstractMojo {
 
     try (final MoJoClassFinder finder = new MoJoClassFinder()) {
       ParserWriterUtils.initParsers(finder, logger);
+
+      // Derive source roots from Maven project classpath
+      final List<String> sourceRoots = FileUtils.deriveSourceRootsFromClasspathEntries(project.getRuntimeClasspathElements());
+      getLog().info("Source roots: " + sourceRoots);
+
       for (final String rootClassName : rootClassNames) {
         ParserGenerator.generateParsers(rootClassName, absoluteOutputDir, parserPackage,
-            customParserDirectory, finder, logger);
+            customParserDirectory, sourceRoots, finder, logger);
       }
     } catch (ClassNotFoundException | IOException | DependencyResolutionRequiredException |  IllegalArgumentException | SecurityException e) {
       throw new MojoExecutionException(e);

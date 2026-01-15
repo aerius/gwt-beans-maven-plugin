@@ -107,7 +107,17 @@ public class ConstructorAnalyzer {
     // Try to find source file and extract parameter names
     final Optional<CompilationUnit> sourceFile = findSourceFile(clazz);
     if (sourceFile.isEmpty()) {
-      logger.info("Source file not found for " + clazz.getName() + ", falling back to setter-based parsing");
+      // Only throw hard error if this class needs constructor-based parsing (no setters)
+      // For hasMatchingConstructor() calls (requireImmutable=false), just return empty
+      if (requireImmutable) {
+        if (sourceRoots.isEmpty()) {
+          throw new IllegalStateException("Cannot analyze constructor for " + clazz.getName()
+              + ": no source roots configured. Use --source-root option or ensure classpath contains target/classes directories.");
+        }
+        throw new IllegalStateException("Source file not found for " + clazz.getName()
+            + ". Searched in source roots: " + sourceRoots
+            + ". Ensure source files are available for constructor-based types.");
+      }
       return Optional.empty();
     }
 
