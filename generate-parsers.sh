@@ -5,7 +5,7 @@ set -e
 
 # Function to print usage
 print_usage() {
-    echo "Usage: $0 --project-dir <maven-project-dir> --root-class <root-class> --output-dir <output-dir> --parser-package <parser-package> [--custom-parser-dir <custom-parser-dir>]"
+    echo "Usage: $0 --project-dir <maven-project-dir> --root-class <root-class> --output-dir <output-dir> --parser-package <parser-package> [--custom-parser-dir <custom-parser-dir>] [--extra-source-root <dir>]..."
     echo ""
     echo "Arguments:"
     echo "  --project-dir        The directory containing the Maven project for which to generate parsers"
@@ -13,10 +13,14 @@ print_usage() {
     echo "  --output-dir         Directory where generated parsers will be written"
     echo "  --parser-package     Package name for the generated parsers"
     echo "  --custom-parser-dir  (Optional) Directory containing custom parser implementations"
+    echo "  --extra-source-root  (Optional) Extra source root directory (can be specified multiple times)"
     exit 1
 }
 
 echo "Debug: Script started"
+
+# Initialize array for extra source roots
+EXTRA_SOURCE_ROOTS=()
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -39,6 +43,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --custom-parser-dir)
             CUSTOM_PARSER_DIR="$2"
+            shift 2
+            ;;
+        --extra-source-root)
+            EXTRA_SOURCE_ROOTS+=("$2")
             shift 2
             ;;
         *)
@@ -149,6 +157,10 @@ GENERATOR_ARGS=(
 if [[ -n "$CUSTOM_PARSER_DIR" ]]; then
     GENERATOR_ARGS+=("--custom-parser-dir" "$CUSTOM_PARSER_DIR")
 fi
+
+for extra_root in "${EXTRA_SOURCE_ROOTS[@]}"; do
+    GENERATOR_ARGS+=("--extra-source-root" "$extra_root")
+done
 
 # --- Modified java command (ensure variables are passed, remove line continuations) ---
 echo "Running GWT Bean Parser Generator..."
