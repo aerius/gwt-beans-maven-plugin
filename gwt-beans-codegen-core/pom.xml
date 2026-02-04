@@ -55,7 +55,7 @@
     <!-- Test dependencies -->
     <dependency>
       <groupId>nl.aerius</groupId>
-      <artifactId>json-utils</artifactId>
+      <artifactId>gwt-beans-codegen-test-json</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

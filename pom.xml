@@ -51,7 +51,7 @@
   </properties>
 
   <modules>
-    <module>json-utils</module>
+    <module>gwt-beans-codegen-test-json</module>
     <module>gwt-beans-codegen-core</module>
     <module>gwt-beans-codegen-maven-plugin</module>
   </modules>
@@ -71,7 +71,7 @@
       <!-- Internal module dependencies -->
       <dependency>
         <groupId>nl.aerius</groupId>
-        <artifactId>json-utils</artifactId>
+        <artifactId>gwt-beans-codegen-test-json</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

@@ -10,9 +10,9 @@
     <version>1.1.0</version>
   </parent>
 
-  <artifactId>json-utils</artifactId>
-  <name>GWT Bean Parser Generator JSON Utilities</name>
-  <description>JSON handling utilities using Jackson</description>
+  <artifactId>gwt-beans-codegen-test-json</artifactId>
+  <name>GWT Bean Parser Generator Test JSON Stubs</name>
+  <description>JVM-based test stubs for GWT JSON classes, enabling unit testing of generated parsers without GWT</description>
 
   <dependencies>
     <dependency>
