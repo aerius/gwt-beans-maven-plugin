@@ -186,6 +186,46 @@ public final class FileUtils {
     return new File(cwd).getParentFile().getAbsolutePath() + "/src/main/java";
   }
 
+  /**
+   * Derives source root directories from the system classpath.
+   * For each classpath entry ending in /target/classes, checks if a corresponding
+   * /src/main/java directory exists.
+   *
+   * @return List of discovered source root directories
+   */
+  public static List<String> deriveSourceRootsFromClasspath() {
+    final String classpath = System.getProperty("java.class.path");
+    if (classpath == null || classpath.isEmpty()) {
+      return List.of();
+    }
+    return deriveSourceRootsFromClasspathEntries(List.of(classpath.split(File.pathSeparator)));
+  }
+
+  /**
+   * Derives source root directories from the given classpath entries.
+   * For each classpath entry ending in /target/classes, checks if a corresponding
+   * /src/main/java directory exists.
+   *
+   * @param classpathEntries List of classpath entries to scan
+   * @return List of discovered source root directories
+   */
+  public static List<String> deriveSourceRootsFromClasspathEntries(final List<String> classpathEntries) {
+    final List<String> sourceRoots = new java.util.ArrayList<>();
+
+    for (final String entry : classpathEntries) {
+      if (entry.endsWith("/target/classes") || entry.endsWith(File.separator + "target" + File.separator + "classes")) {
+        final String sourceRoot = entry
+            .replace("/target/classes", "/src/main/java")
+            .replace(File.separator + "target" + File.separator + "classes", File.separator + "src" + File.separator + "main" + File.separator + "java");
+        final File sourceDir = new File(sourceRoot);
+        if (sourceDir.isDirectory()) {
+          sourceRoots.add(sourceRoot);
+        }
+      }
+    }
+    return sourceRoots;
+  }
+
   public static String getSimpleClassName(final String fullyQualifiedClassName) {
     return fullyQualifiedClassName.substring(fullyQualifiedClassName.lastIndexOf('.') + 1);
   }

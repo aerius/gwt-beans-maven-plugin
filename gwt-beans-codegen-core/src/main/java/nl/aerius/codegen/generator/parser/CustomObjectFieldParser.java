@@ -52,6 +52,12 @@ public class CustomObjectFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level, Type fieldType) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType, String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("CustomObjectFieldParser cannot handle type: " + type.getTypeName());
     }
@@ -80,7 +86,7 @@ public class CustomObjectFieldParser implements TypeParser {
       parserClassName = ClassName.get(parserPackage, parserSimpleName);
     }
 
-    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
+    String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "value");
 
     code.addStatement("final $T $L = $T.parse($L)", fieldType, resultVarName, parserClassName, accessExpression);
 

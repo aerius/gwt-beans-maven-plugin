@@ -41,6 +41,7 @@ import org.apache.maven.project.MavenProject;
 import nl.aerius.codegen.ParserGenerator;
 import nl.aerius.codegen.generator.ParserWriterUtils;
 import nl.aerius.codegen.util.ClassFinder;
+import nl.aerius.codegen.util.FileUtils;
 import nl.aerius.codegen.util.Logger;
 
 @Mojo(name = "generate-parsers", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresDependencyResolution = ResolutionScope.COMPILE)
@@ -70,6 +71,13 @@ public class ParserGeneratorMojo extends AbstractMojo {
   @Parameter
   private String customParserDir;
 
+  /**
+   * Extra source roots to search for Java source files.
+   * Useful for multi-module projects where domain classes are in separate modules.
+   * Paths can be absolute or relative to the project base directory.
+   */
+  @Parameter
+  private List<String> extraSourceRoots;
 
   /**
    * The Maven project instance for the executing project.
@@ -94,9 +102,29 @@ public class ParserGeneratorMojo extends AbstractMojo {
 
     try (final MoJoClassFinder finder = new MoJoClassFinder()) {
       ParserWriterUtils.initParsers(finder, logger);
+
+      // Derive source roots from Maven project classpath
+      final List<String> sourceRoots = new ArrayList<>(
+          FileUtils.deriveSourceRootsFromClasspathEntries(project.getRuntimeClasspathElements()));
+
+      // Add extra source roots if configured
+      if (extraSourceRoots != null && !extraSourceRoots.isEmpty()) {
+        for (final String extraRoot : extraSourceRoots) {
+          final String absoluteRoot = resolvePathAgainstProjectBase(extraRoot);
+          if (new File(absoluteRoot).isDirectory()) {
+            sourceRoots.add(absoluteRoot);
+            getLog().info("Added extra source root: " + absoluteRoot);
+          } else {
+            getLog().warn("Extra source root does not exist or is not a directory: " + absoluteRoot);
+          }
+        }
+      }
+
+      getLog().info("Source roots: " + sourceRoots);
+
       for (final String rootClassName : rootClassNames) {
         ParserGenerator.generateParsers(rootClassName, absoluteOutputDir, parserPackage,
-            customParserDirectory, finder, logger);
+            customParserDirectory, sourceRoots, finder, logger);
       }
     } catch (ClassNotFoundException | IOException | DependencyResolutionRequiredException |  IllegalArgumentException | SecurityException e) {
       throw new MojoExecutionException(e);
@@ -115,6 +143,14 @@ public class ParserGeneratorMojo extends AbstractMojo {
     } else {
       return Paths.get(absoluteJavaSourceDir, path).toFile().getAbsolutePath();
     }
+  }
+
+  private String resolvePathAgainstProjectBase(final String path) {
+    final File file = new File(path);
+    if (file.isAbsolute()) {
+      return file.getAbsolutePath();
+    }
+    return new File(project.getBasedir(), path).getAbsolutePath();
   }
 
   private void addGeneratedSourcesAsResource(final String outputPath, final String absoluteJavaSourceDir) {

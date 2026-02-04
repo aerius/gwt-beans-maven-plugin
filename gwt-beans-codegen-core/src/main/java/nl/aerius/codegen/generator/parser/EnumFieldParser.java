@@ -40,12 +40,18 @@ public class EnumFieldParser implements TypeParser {
   public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
       final CodeBlock accessExpression,
       final int level, final Type fieldType) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  @Override
+  public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
+      final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("EnumFieldParser cannot handle type: " + type.getTypeName());
     }
     final Class<?> enumType = (Class<?>) type;
-    final String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "value");
-    final String strVarName = ParserCommonUtils.getVariableNameForLevel(level, "str");
+    final String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "value");
+    final String strVarName = variableName != null ? variableName + "Str" : ParserCommonUtils.getVariableNameForLevel(level, "str");
 
     // Find a potential @JsonCreator method using the common utility
     final Method jsonCreatorMethod = ParserCommonUtils.findJsonCreatorMethod(enumType, classFinder, logger);

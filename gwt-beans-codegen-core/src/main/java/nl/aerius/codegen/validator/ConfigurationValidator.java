@@ -27,6 +27,7 @@ import com.palantir.javapoet.ClassName;
 
 import jsinterop.annotations.JsProperty;
 
+import nl.aerius.codegen.analyzer.ConstructorAnalyzer;
 import nl.aerius.codegen.analyzer.TypeAnalyzer;
 import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.FileUtils;
@@ -44,10 +45,12 @@ public class ConfigurationValidator {
   private final Set<String> customParserTypes = new HashSet<>();
   private final Set<String> skippedTypes = new HashSet<>();
   private final Set<Class<?>> validatedClasses = new HashSet<>();
+  private final Set<Class<?>> constructorBasedTypes = new HashSet<>();
   private final TypeAnalyzer typeAnalyzer;
   private final ClassFinder classFinder;
   private final Logger logger;
 
+  private ConstructorAnalyzer constructorAnalyzer;
   private boolean hasErrors = false;
 
   public ConfigurationValidator(final ClassFinder classFinder, final Logger logger) {
@@ -63,6 +66,16 @@ public class ConfigurationValidator {
     }
     // Also set custom parser types on the TypeAnalyzer instance
     this.typeAnalyzer.setCustomParserTypes(customParserTypes);
+  }
+
+  /**
+   * Sets the source roots for constructor analysis.
+   * Must be called before validation to enable constructor-based type detection.
+   *
+   * @param sourceRoots List of source root directories to search for source files
+   */
+  public void setSourceRoots(final List<String> sourceRoots) {
+    this.constructorAnalyzer = new ConstructorAnalyzer(sourceRoots, logger);
   }
 
   public void addSkippedType(final String fullyQualifiedClassName) {
@@ -249,8 +262,19 @@ public class ConfigurationValidator {
       return; // Still return as this is a fundamental issue
     }
 
-    // Check for public no-args constructor (Skip for interfaces)
-    if (!clazz.isInterface()) {
+    // Check if this class can use constructor-based parsing (immutable type)
+    final boolean isConstructorBasedType = !clazz.isInterface() && canUseConstructorBasedParsing(clazz);
+    if (isConstructorBasedType) {
+      constructorBasedTypes.add(clazz);
+      logger.info("\u2139\ufe0f  " + clazz.getName() + ": Using constructor-based parsing (immutable type)");
+    }
+
+    // Check if this class has any matching constructor (for validation purposes)
+    final boolean hasValidConstructor = !clazz.isInterface() && hasMatchingConstructor(clazz);
+
+    // Check for public no-args constructor (Skip for interfaces, abstract classes, and types with matching constructor)
+    // Abstract classes can't be instantiated directly, so they don't need a public no-args constructor
+    if (!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers()) && !hasValidConstructor) {
       if (!validateConstructor(clazz, treatErrorsAsWarnings)) {
         classHasIssues = true;
       }
@@ -268,7 +292,7 @@ public class ConfigurationValidator {
       if (!validateField(clazz, field, treatErrorsAsWarnings)) {
         classHasIssues = true;
       }
-      if (!validateGetterSetter(clazz, field, treatErrorsAsWarnings)) {
+      if (!validateGetterSetter(clazz, field, treatErrorsAsWarnings, isConstructorBasedType)) {
         classHasIssues = true;
       }
       if (!validateFieldType(clazz, field, treatErrorsAsWarnings)) { // Pass class for context
@@ -346,6 +370,32 @@ public class ConfigurationValidator {
     }
   }
 
+  /**
+   * Checks if a class can use constructor-based parsing.
+   * A class can use constructor-based parsing if:
+   * 1. ConstructorAnalyzer is configured (source roots set)
+   * 2. The class has a constructor with parameters matching all parseable fields
+   * 3. The class does NOT have setters for all fields (i.e., it's immutable)
+   */
+  private boolean canUseConstructorBasedParsing(final Class<?> clazz) {
+    if (constructorAnalyzer == null) {
+      return false;
+    }
+    return constructorAnalyzer.canUseConstructorBasedParsing(clazz);
+  }
+
+  /**
+   * Checks if a class has a constructor that could be used for initialization.
+   * Unlike canUseConstructorBasedParsing(), this does NOT require the class to be immutable.
+   * Used for validation to determine if a no-arg constructor is required.
+   */
+  private boolean hasMatchingConstructor(final Class<?> clazz) {
+    if (constructorAnalyzer == null) {
+      return false;
+    }
+    return constructorAnalyzer.hasMatchingConstructor(clazz);
+  }
+
   private boolean validateField(final Class<?> clazz, final Field field, final boolean treatErrorsAsWarnings) {
     boolean isValid = true;
     if (!Modifier.isPrivate(field.getModifiers())) {
@@ -372,7 +422,8 @@ public class ConfigurationValidator {
     return isValid;
   }
 
-  private boolean validateGetterSetter(final Class<?> clazz, final Field field, final boolean treatErrorsAsWarnings) {
+  private boolean validateGetterSetter(final Class<?> clazz, final Field field, final boolean treatErrorsAsWarnings,
+      final boolean isConstructorBasedType) {
     final String fieldName = field.getName();
     final String capitalizedName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
     boolean isValid = true;
@@ -424,7 +475,12 @@ public class ConfigurationValidator {
       }
     }
 
-    // Always check setter
+    // Skip setter validation for constructor-based types (they use constructor parameters instead)
+    if (isConstructorBasedType) {
+      return isValid;
+    }
+
+    // Check setter for non-constructor-based types
     try {
       final Method setter = clazz.getMethod("set" + capitalizedName, field.getType());
       if (!Modifier.isPublic(setter.getModifiers())) {
@@ -451,7 +507,15 @@ public class ConfigurationValidator {
     try {
       // Check if this is a Map field
       if (Map.class.isAssignableFrom(field.getType())) {
-        final Type[] genericTypes = ((ParameterizedType) field.getGenericType()).getActualTypeArguments();
+        final Type genericType = field.getGenericType();
+
+        // If the field type is not parameterized directly (e.g., MyMap extends HashMap<K,V>),
+        // skip the map key validation as we can't determine the key type from the field
+        if (!(genericType instanceof ParameterizedType)) {
+          return fieldTypeIsValid;
+        }
+
+        final Type[] genericTypes = ((ParameterizedType) genericType).getActualTypeArguments();
         final Type keyType = genericTypes[0];
 
         // Skip primitive types, their wrappers, String, and enums as they don't need

@@ -6,6 +6,7 @@ import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
 import nl.aerius.codegen.test.types.ConcreteType;
 import nl.aerius.codegen.test.types.TestAdvancedMapType;
 import nl.aerius.codegen.test.types.TestComplexCollectionType;
+import nl.aerius.codegen.test.types.TestConstructorBasedType;
 import nl.aerius.codegen.test.types.TestCustomParserType;
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
@@ -124,6 +125,12 @@ public class TestRootObjectTypeParser {
     if (baseObj.has("primitiveArrays") && !baseObj.isNull("primitiveArrays")) {
       final TestPrimitiveArrayType value = TestPrimitiveArrayTypeParser.parse(baseObj.getObject("primitiveArrays"));
       config.setPrimitiveArrays(value);
+    }
+
+    // Parse constructorBased
+    if (baseObj.has("constructorBased") && !baseObj.isNull("constructorBased")) {
+      final TestConstructorBasedType value = TestConstructorBasedTypeParser.parse(baseObj.getObject("constructorBased"));
+      config.setConstructorBased(value);
     }
   }
 }

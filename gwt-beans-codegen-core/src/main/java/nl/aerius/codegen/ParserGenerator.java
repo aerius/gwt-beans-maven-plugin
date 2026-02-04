@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -26,7 +27,7 @@ public class ParserGenerator {
 
   public static void generateParsers(final String rootClassName, final String outputDir, final String parserPackage)
       throws IOException, ClassNotFoundException {
-    generateParsers(rootClassName, outputDir, parserPackage, null, new ClassFinder() {}, new Logger() {});
+    generateParsers(rootClassName, outputDir, parserPackage, null, List.of(), new ClassFinder() {}, new Logger() {});
   }
 
   /**
@@ -34,7 +35,7 @@ public class ParserGenerator {
    * determines generator info, and calls the generation logic.
    */
   public static void generateParsers(final String rootClassName, final String outputDir, final String parserPackage,
-      final String customParserDir, final ClassFinder classFinder, final Logger logger) throws IOException, ClassNotFoundException {
+      final String customParserDir, final List<String> sourceRoots, final ClassFinder classFinder, final Logger logger) throws IOException, ClassNotFoundException {
     // Load the root class
     final Class<?> rootClass = classFinder.forName(rootClassName);
 
@@ -50,7 +51,10 @@ public class ParserGenerator {
 
     // Validate if needed
     logger.info("Step 2: Validating " + rootClass.getName());
-    validateConfiguration(rootClass, customParserTypes, classFinder, logger);
+    validateConfiguration(rootClass, customParserTypes, sourceRoots, classFinder, logger);
+
+    // Set source roots for parser generation (needed for constructor-based types)
+    ParserWriterUtils.setSourceRoots(sourceRoots, logger);
 
     // Generate parsers
     logger.info("Step 3: Generating Parsers");
@@ -62,10 +66,11 @@ public class ParserGenerator {
     generateParsersForClass(rootClass, parserPackage, outputDir, customParserDir, generatorName, classFinder, logger);
   }
 
-  private static void validateConfiguration(final Class<?> rootClass, final Set<String> customParserTypes, final ClassFinder classFinder,
-      final Logger logger) {
+  private static void validateConfiguration(final Class<?> rootClass, final Set<String> customParserTypes, final List<String> sourceRoots,
+      final ClassFinder classFinder, final Logger logger) {
     final ConfigurationValidator validator = new ConfigurationValidator(classFinder, logger);
     validator.setCustomParserTypes(customParserTypes);
+    validator.setSourceRoots(sourceRoots);
     if (!validator.validate(rootClass)) {
       throw new IllegalStateException(rootClass.getName() + " validation failed. Please fix the issues before generating parsers.");
     }

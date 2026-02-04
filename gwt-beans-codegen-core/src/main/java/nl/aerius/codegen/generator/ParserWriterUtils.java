@@ -7,8 +7,11 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.lang.model.element.Modifier;
 
@@ -20,6 +23,8 @@ import com.palantir.javapoet.JavaFile;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeSpec;
 
+import nl.aerius.codegen.analyzer.ConstructorAnalyzer;
+import nl.aerius.codegen.analyzer.ConstructorInfo;
 import nl.aerius.codegen.generator.parser.CollectionFieldParser;
 import nl.aerius.codegen.generator.parser.CustomObjectFieldParser;
 import nl.aerius.codegen.generator.parser.EnumFieldParser;
@@ -61,8 +66,22 @@ public final class ParserWriterUtils {
   private static TypeParser collectionFieldParser;
   private static TypeParser mapFieldParser;
 
+  // Constructor analyzer for detecting constructor-based parsing
+  private static ConstructorAnalyzer constructorAnalyzer;
+
   private ParserWriterUtils() {
     // Utility class, no instantiation
+  }
+
+  /**
+   * Sets the source roots for constructor analysis.
+   * Must be called before generating parsers for constructor-based types.
+   *
+   * @param sourceRoots List of source root directories to search for source files
+   * @param logger Logger instance for messages
+   */
+  public static void setSourceRoots(final List<String> sourceRoots, final Logger logger) {
+    constructorAnalyzer = new ConstructorAnalyzer(sourceRoots, logger);
   }
 
   public static void initParsers(final ClassFinder classFinder, final Logger logger) {
@@ -102,18 +121,46 @@ public final class ParserWriterUtils {
   /**
    * Main entry point for generating a parser class.
    * Creates both parse(String) and parse(JSONObjectHandle) methods.
+   * For constructor-based types (no setters), generates constructor-based parse method.
    * @param classFinder
    */
   public static void generateParserForFields(final TypeSpec.Builder typeSpec, final Class<?> targetClass, final String parserPackage,
       final ClassFinder classFinder) {
     typeSpec.addMethod(createStringParseMethod(targetClass));
-    // Decide which kind of object parse method to generate based on polymorphism
+
+    // Check if this class should use constructor-based parsing
+    final Optional<ConstructorInfo> constructorInfo = findConstructorInfo(targetClass);
+
+    if (constructorInfo.isPresent()) {
+      // Constructor-based: single parse method that constructs the object
+      typeSpec.addMethod(createConstructorBasedParseMethod(targetClass, parserPackage, classFinder, constructorInfo.get()));
+    } else {
+      // Setter-based: existing approach
+      addSetterBasedParseMethods(typeSpec, targetClass, parserPackage, classFinder);
+    }
+  }
+
+  /**
+   * Adds setter-based parse methods to the type specification.
+   */
+  private static void addSetterBasedParseMethods(final TypeSpec.Builder typeSpec, final Class<?> targetClass,
+      final String parserPackage, final ClassFinder classFinder) {
     if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
       typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
     } else {
       typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
     }
     typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage, classFinder));
+  }
+
+  /**
+   * Finds constructor info for a class, if constructor-based parsing is available.
+   */
+  private static Optional<ConstructorInfo> findConstructorInfo(final Class<?> targetClass) {
+    if (constructorAnalyzer == null) {
+      return Optional.empty();
+    }
+    return constructorAnalyzer.findMatchingConstructorInfo(targetClass);
   }
 
   /**
@@ -324,6 +371,74 @@ public final class ParserWriterUtils {
     return methodBuilder.build();
   }
 
+  /**
+   * Creates a constructor-based parse method for immutable types.
+   * Parses all fields into local variables and then calls the constructor.
+   */
+  private static MethodSpec createConstructorBasedParseMethod(final Class<?> targetClass, final String parserPackage,
+      final ClassFinder classFinder, final ConstructorInfo constructorInfo) {
+    final ClassName targetClassName = ClassName.get(targetClass);
+    final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+        .returns(targetClassName)
+        .addParameter(ParserCommonUtils.getJSONObjectHandle(), ParserCommonUtils.BASE_OBJECT_PARAM_NAME, Modifier.FINAL);
+
+    methodBuilder.beginControlFlow("if ($L == null)", ParserCommonUtils.BASE_OBJECT_PARAM_NAME)
+        .addStatement("return null")
+        .endControlFlow();
+
+    // Get fields in constructor parameter order
+    final List<Field> fieldsInOrder = constructorInfo.getFieldsInConstructorOrder();
+    final List<String> constructorArgVars = new ArrayList<>();
+
+    // Parse each field using existing TypeParser infrastructure
+    for (final Field field : fieldsInOrder) {
+      final String resultVar = generateFieldParsingCode(methodBuilder, field, parserPackage);
+      constructorArgVars.add(resultVar);
+    }
+
+    methodBuilder.addCode("\n");
+    methodBuilder.addStatement("return new $T($L)", targetClass, String.join(", ", constructorArgVars));
+
+    return methodBuilder.build();
+  }
+
+  /**
+   * Generates parsing code for a single field in a constructor-based parser.
+   */
+  private static String generateFieldParsingCode(final MethodSpec.Builder methodBuilder, final Field field,
+      final String parserPackage) {
+    methodBuilder.addCode("\n");
+    methodBuilder.addComment("Parse $L", field.getName());
+
+    // Check if field is required (must exist in JSON)
+    methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
+        .addStatement("throw new $T($S)", RuntimeException.class,
+            "Required field '" + field.getName() + "' is missing")
+        .endControlFlow();
+
+    // Create access expression for this field
+    final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
+        field.getGenericType(),
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+        CodeBlock.of("$S", field.getName()));
+
+    // Use existing TypeParser infrastructure to generate parsing code with field name as variable name
+    final CodeBlock.Builder parseCode = CodeBlock.builder();
+    final String resultVar = dispatchGenerateParsingCodeInto(
+        parseCode,
+        field.getGenericType(),
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+        parserPackage,
+        fieldAccess,
+        1,
+        field.getGenericType(),
+        field.getName());
+
+    methodBuilder.addCode(parseCode.build());
+    return resultVar;
+  }
+
   private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage, final ClassFinder classFinder) {
     final ClassName targetClassName = ClassName.get(targetClass);
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
@@ -416,18 +531,23 @@ public final class ParserWriterUtils {
   public static String dispatchGenerateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName,
       final String parserPackage,
       final CodeBlock accessExpression, final int level, final Type fieldType) {
+    return dispatchGenerateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  /**
+   * Dispatches parsing logic to the appropriate TypeParser with an optional variable name override.
+   */
+  public static String dispatchGenerateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName,
+      final String parserPackage, final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     for (final TypeParser parser : PARSERS) {
       if (parser.canHandle(type)) {
-        // Call 7-parameter version
-        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType);
+        return parser.generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, variableName);
       }
     }
 
     // If no parser handled the type, add a placeholder or throw an error
-    final String placeholderVar = "level" + level + "UnsupportedValue";
+    final String placeholderVar = variableName != null ? variableName : "level" + level + "UnsupportedValue";
     code.addStatement("$T $L = null; // Type not supported: $L", Object.class, placeholderVar, type.getTypeName());
-    // Alternatively, throw an exception:
-    // throw new IllegalArgumentException("No parser found for type: " + type.getTypeName());
     return placeholderVar;
   }
 

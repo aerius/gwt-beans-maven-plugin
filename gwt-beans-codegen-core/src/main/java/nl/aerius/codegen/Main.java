@@ -16,6 +16,9 @@
  */
 package nl.aerius.codegen;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import nl.aerius.codegen.generator.ParserWriterUtils;
 import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.Logger;
@@ -33,6 +36,10 @@ public class Main {
 
       Optional Options:
       --custom-parser-dir, -c <dir> Directory containing custom parsers
+      --source-root, -s <dir>     Source root directory (can be specified multiple times).
+                                  If not specified, derived from classpath.
+      --extra-source-root, -e <dir> Extra source root directory to add to auto-derived roots
+                                  (can be specified multiple times).
       --help, -h                 Show this help message
       """;
 
@@ -57,6 +64,21 @@ public class Main {
     System.out.println("  Parser package: " + options.parserPackage);
     System.out.println(
         "  Custom parser directory: " + (options.customParserDir != null ? options.customParserDir : "not specified"));
+
+    // Derive source roots from classpath if not explicitly specified
+    List<String> sourceRoots = options.sourceRoots;
+    if (sourceRoots.isEmpty()) {
+      sourceRoots = new ArrayList<>(nl.aerius.codegen.util.FileUtils.deriveSourceRootsFromClasspath());
+      System.out.println("  Source roots (derived from classpath): " + sourceRoots);
+    } else {
+      System.out.println("  Source roots (explicitly specified): " + sourceRoots);
+    }
+
+    // Add extra source roots if specified
+    if (!options.extraSourceRoots.isEmpty()) {
+      sourceRoots.addAll(options.extraSourceRoots);
+      System.out.println("  Extra source roots: " + options.extraSourceRoots);
+    }
     System.out.println();
 
     try {
@@ -64,7 +86,7 @@ public class Main {
       final ClassFinder classFinder = new ClassFinder() {};
 
       ParserWriterUtils.initParsers(classFinder, logger);
-      ParserGenerator.generateParsers(options.rootClassName, options.outputDir, options.parserPackage, options.customParserDir, classFinder, logger);
+      ParserGenerator.generateParsers(options.rootClassName, options.outputDir, options.parserPackage, options.customParserDir, sourceRoots, classFinder, logger);
       System.out.println("\n✓ Parser generation completed successfully");
     } catch (final Exception e) {
       System.err.println("Error: " + e.getMessage());
@@ -114,6 +136,20 @@ public class Main {
           System.err.println("Missing value for --custom-parser-dir");
           return null;
         }
+      } else if ("--source-root".equals(arg) || "-s".equals(arg)) {
+        if (i + 1 < args.length) {
+          options.sourceRoots.add(args[++i]);
+        } else {
+          System.err.println("Missing value for --source-root");
+          return null;
+        }
+      } else if ("--extra-source-root".equals(arg) || "-e".equals(arg)) {
+        if (i + 1 < args.length) {
+          options.extraSourceRoots.add(args[++i]);
+        } else {
+          System.err.println("Missing value for --extra-source-root");
+          return null;
+        }
       } else {
         System.err.println("Unknown argument: " + arg);
         printUsage();
@@ -139,5 +175,7 @@ public class Main {
     String outputDir;
     String parserPackage;
     String customParserDir = null;
+    List<String> sourceRoots = new ArrayList<>();
+    List<String> extraSourceRoots = new ArrayList<>();
   }
 }
