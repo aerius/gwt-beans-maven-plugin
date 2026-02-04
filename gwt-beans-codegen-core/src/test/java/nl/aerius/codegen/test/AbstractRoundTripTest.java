@@ -116,7 +116,7 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
       Files.writeString(file.toPath(), updatedContent);
     }
 
-    // Get the classpath including the json-utils module
+    // Get the classpath including the gwt-beans-codegen-test-json module
     final String classpath = System.getProperty("java.class.path");
 
     // Compile all parsers together

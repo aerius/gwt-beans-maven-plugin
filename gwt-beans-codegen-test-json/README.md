@@ -1,16 +1,17 @@
-# JSON Utilities
+# GWT Beans Codegen Test JSON Stubs
 
-A lightweight JSON handling library built on Jackson.
+JVM-based test stubs for GWT JSON classes (`nl.aerius.wui.service.json.JSONObjectHandle` etc.), backed by Jackson. This module enables unit testing of generated parsers without requiring a GWT runtime by swapping GWT JSON imports for these JVM-compatible implementations.
 
 ## Importing
 
-Add the following dependency to your Maven project:
+Add the following test dependency to your Maven project:
 
 ```xml
 <dependency>
     <groupId>nl.aerius</groupId>
-    <artifactId>json-utils</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <artifactId>gwt-beans-codegen-test-json</artifactId>
+    <version>1.1.0</version>
+    <scope>test</scope>
 </dependency>
 ```
 

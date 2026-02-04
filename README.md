@@ -6,7 +6,7 @@ A Maven plugin for generating GWT bean parsers.
 
 This project consists of the following modules:
 
-1. **json-utils**: A lightweight JSON handling library built on Jackson.
+1. **gwt-beans-codegen-test-json**: JVM-based test stubs for GWT JSON classes, enabling unit testing without GWT.
 2. **gwt-beans-codegen-core**: The core code generation engine for GWT bean parsers.
 3. **gwt-beans-codegen-maven-plugin**: The Maven plugin code.
 
@@ -20,11 +20,11 @@ mvn clean install
 
 ## Modules
 
-### json-utils
+### gwt-beans-codegen-test-json
 
-A lightweight JSON handling library that provides utilities for working with JSON data.
+JVM-based test stubs for GWT JSON classes, backed by Jackson. Enables unit testing of generated parsers without a GWT runtime.
 
-See [json-utils/README.md](json-utils/README.md) for usage instructions.
+See [gwt-beans-codegen-test-json/README.md](gwt-beans-codegen-test-json/README.md) for usage instructions.
 
 ### gwt-beans-codegen-core
 
