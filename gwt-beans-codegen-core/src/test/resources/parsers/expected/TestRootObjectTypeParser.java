@@ -7,6 +7,8 @@ import nl.aerius.codegen.test.types.ConcreteType;
 import nl.aerius.codegen.test.types.TestAdvancedMapType;
 import nl.aerius.codegen.test.types.TestComplexCollectionType;
 import nl.aerius.codegen.test.types.TestConstructorBasedType;
+import nl.aerius.codegen.test.types.TestConstructorWithGenericsType;
+import nl.aerius.codegen.test.types.TestConstructorWithIgnoredFieldType;
 import nl.aerius.codegen.test.types.TestCustomParserType;
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
@@ -131,6 +133,18 @@ public class TestRootObjectTypeParser {
     if (baseObj.has("constructorBased") && !baseObj.isNull("constructorBased")) {
       final TestConstructorBasedType value = TestConstructorBasedTypeParser.parse(baseObj.getObject("constructorBased"));
       config.setConstructorBased(value);
+    }
+
+    // Parse constructorWithGenerics
+    if (baseObj.has("constructorWithGenerics") && !baseObj.isNull("constructorWithGenerics")) {
+      final TestConstructorWithGenericsType value = TestConstructorWithGenericsTypeParser.parse(baseObj.getObject("constructorWithGenerics"));
+      config.setConstructorWithGenerics(value);
+    }
+
+    // Parse constructorWithIgnoredField
+    if (baseObj.has("constructorWithIgnoredField") && !baseObj.isNull("constructorWithIgnoredField")) {
+      final TestConstructorWithIgnoredFieldType value = TestConstructorWithIgnoredFieldTypeParser.parse(baseObj.getObject("constructorWithIgnoredField"));
+      config.setConstructorWithIgnoredField(value);
     }
   }
 }
