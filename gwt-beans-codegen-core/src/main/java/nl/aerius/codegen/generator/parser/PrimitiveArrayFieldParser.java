@@ -39,11 +39,17 @@ public class PrimitiveArrayFieldParser implements TypeParser {
   @Override
   public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
       int level, Type fieldType) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  @Override
+  public String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage, CodeBlock accessExpression,
+      int level, Type fieldType, String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("PrimitiveArrayFieldParser cannot handle type: " + type.getTypeName());
     }
 
-    // --- Extract simple field name from accessExpression --- 
+    // --- Extract simple field name from accessExpression ---
     String accessExpressionString = accessExpression.toString();
     String fieldNameString = "";
     int lastQuote = accessExpressionString.lastIndexOf('"');
@@ -65,7 +71,7 @@ public class PrimitiveArrayFieldParser implements TypeParser {
     Class<?> arrayType = (Class<?>) type;
     Class<?> componentType = arrayType.getComponentType();
     TypeName declarationTypeName = TypeName.get(fieldType);
-    String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Array");
 
     code.addStatement("$T $L = null", declarationTypeName, resultVarName);
 
@@ -83,11 +89,11 @@ public class PrimitiveArrayFieldParser implements TypeParser {
     } else {
       // Should not happen due to canHandle check
         code.endControlFlow();
-        return resultVarName; 
+        return resultVarName;
     }
 
-    String jsonArrayVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
-    String listVarName = ParserCommonUtils.getVariableNameForLevel(level, "TempList");
+    String jsonArrayVar = variableName != null ? variableName + "JsonArray" : ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
+    String listVarName = variableName != null ? variableName + "TempList" : ParserCommonUtils.getVariableNameForLevel(level, "TempList");
     ClassName jsonArrayHandleName = ParserCommonUtils.getJSONArrayHandle();
     ClassName arrayListName = ClassName.get(java.util.ArrayList.class);
     TypeName wrapperListName = ParameterizedTypeName.get(ClassName.get(java.util.List.class), ClassName.get(wrapperType));

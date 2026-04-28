@@ -80,8 +80,6 @@ public class TestAdvancedMapTypeParser {
       config.setObjectListMap(map);
     }
 
-    // Skipping ignored field: interfaceMap
-
     // Parse complexKeyMap
     if (baseObj.has("complexKeyMap") && !baseObj.isNull("complexKeyMap")) {
       final JSONObjectHandle obj = baseObj.getObject("complexKeyMap");
@@ -92,10 +90,6 @@ public class TestAdvancedMapTypeParser {
       });
       config.setComplexKeyMap(map);
     }
-
-    // Skipping ignored field: wildcardListMap
-
-    // Skipping ignored field: wildcardKeyMap
 
     // Parse sanity
     if (baseObj.has("sanity") && !baseObj.isNull("sanity")) {

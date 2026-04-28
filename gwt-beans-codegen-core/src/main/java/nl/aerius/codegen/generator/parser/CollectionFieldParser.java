@@ -68,25 +68,32 @@ public class CollectionFieldParser implements TypeParser {
   public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
       final CodeBlock accessExpression,
       final int level) {
-    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type);
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, type, null);
   }
 
   @Override
   public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
       final CodeBlock accessExpression,
       final int level, final Type fieldType) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  @Override
+  public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
+      final CodeBlock accessExpression,
+      final int level, final Type fieldType, final String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("CollectionFieldParser cannot handle type: " + type.getTypeName());
     }
 
     // Determine if it's a Collection<E> or an Object E[]
     if (type instanceof ParameterizedType && Collection.class.isAssignableFrom((Class<?>) ((ParameterizedType) type).getRawType())) {
-      return generateCollectionParsingCodeInto(code, (ParameterizedType) type, parserPackage, accessExpression, level, fieldType);
+      return generateCollectionParsingCodeInto(code, (ParameterizedType) type, parserPackage, accessExpression, level, fieldType, variableName);
     } else if (type instanceof Class<?> && ((Class<?>) type).isArray()) {
-      return generateObjectArrayParsingCodeInto(code, (Class<?>) type, parserPackage, accessExpression, level, fieldType);
+      return generateObjectArrayParsingCodeInto(code, (Class<?>) type, parserPackage, accessExpression, level, fieldType, variableName);
     } else if (type instanceof java.lang.reflect.GenericArrayType) {
       return generateGenericArrayParsingCodeInto(code, (java.lang.reflect.GenericArrayType) type, parserPackage, accessExpression, level,
-          fieldType);
+          fieldType, variableName);
     } else {
       throw new IllegalArgumentException("Unhandled type in CollectionFieldParser: " + type.getTypeName());
     }
@@ -95,7 +102,7 @@ public class CollectionFieldParser implements TypeParser {
   // Handles Collection<E>
   private String generateCollectionParsingCodeInto(final CodeBlock.Builder code, final ParameterizedType collectionRuntimeType,
       final String parserPackage,
-      final CodeBlock accessExpression, final int level, final Type fieldType) {
+      final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     final Type elementType = collectionRuntimeType.getActualTypeArguments()[0];
     // Use fieldType to determine the variable declaration type
     final Type variableDeclarationType = fieldType;
@@ -104,14 +111,14 @@ public class CollectionFieldParser implements TypeParser {
 
     // Determine implementation and set resultVarName prefix
     if (variableDeclarationType instanceof Class<?> && Set.class.isAssignableFrom((Class<?>) variableDeclarationType)) {
-      resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Set");
+      resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Set");
       collectionImpl = HASH_SET;
     } else if (variableDeclarationType instanceof ParameterizedType
         && Set.class.isAssignableFrom((Class<?>) ((ParameterizedType) variableDeclarationType).getRawType())) {
-      resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Set");
+      resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Set");
       collectionImpl = HASH_SET;
     } else { // Default to List/ArrayList
-      resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "List");
+      resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "List");
       collectionImpl = ARRAY_LIST;
     }
 
@@ -122,8 +129,9 @@ public class CollectionFieldParser implements TypeParser {
       return resultVarName;
     }
 
-    final String arrayVar = ParserCommonUtils.getVariableNameForLevel(level, "Array");
-    final String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
+    // Prefix siblings with the field name (constructor path) or fall back to level-based names.
+    final String arrayVar = variableName != null ? variableName + "Array" : ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    final String itemVar = variableName != null ? variableName + "Item" : ParserCommonUtils.getVariableNameForLevel(level, "Item");
 
     // 1. Get JSON Array
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayVar, accessExpression);
@@ -177,13 +185,13 @@ public class CollectionFieldParser implements TypeParser {
 
   // Handles Object E[] (e.g., String[], CustomObject[])
   private String generateObjectArrayParsingCodeInto(final CodeBlock.Builder code, final Class<?> arrayRuntimeType, final String parserPackage,
-      final CodeBlock accessExpression, final int level, final Type fieldType) {
+      final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     final Type componentType = arrayRuntimeType.getComponentType();
-    // Use helper for variable names
-    final String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
-    final String arrayJsonVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
-    final String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
-    final String indexVar = ParserCommonUtils.getVariableNameForLevel(level, "Index");
+    // Prefix siblings with the field name (constructor path) or fall back to level-based names.
+    final String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    final String arrayJsonVar = variableName != null ? variableName + "JsonArray" : ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
+    final String itemVar = variableName != null ? variableName + "Item" : ParserCommonUtils.getVariableNameForLevel(level, "Item");
+    final String indexVar = variableName != null ? variableName + "Index" : ParserCommonUtils.getVariableNameForLevel(level, "Index");
 
     // 1. Get the JSON Array - Use $T for ClassName
     code.addStatement("final $T $L = $L", ParserCommonUtils.getJSONArrayHandle(), arrayJsonVar, accessExpression);
@@ -218,13 +226,12 @@ public class CollectionFieldParser implements TypeParser {
 
   // Handles GenericArrayType (e.g., T[]) - Experimental
   private String generateGenericArrayParsingCodeInto(final CodeBlock.Builder code, final java.lang.reflect.GenericArrayType arrayRuntimeType,
-      final String parserPackage, final CodeBlock accessExpression, final int level, final Type fieldType) {
+      final String parserPackage, final CodeBlock accessExpression, final int level, final Type fieldType, final String variableName) {
     final Type componentType = arrayRuntimeType.getGenericComponentType();
-    // Use helper for variable names
-    final String resultVarName = ParserCommonUtils.getVariableNameForLevel(level, "Array");
-    final String arrayJsonVar = ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
-    final String itemVar = ParserCommonUtils.getVariableNameForLevel(level, "Item");
-    final String tempListVar = ParserCommonUtils.getVariableNameForLevel(level, "TempList");
+    final String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    final String arrayJsonVar = variableName != null ? variableName + "JsonArray" : ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
+    final String itemVar = variableName != null ? variableName + "Item" : ParserCommonUtils.getVariableNameForLevel(level, "Item");
+    final String tempListVar = variableName != null ? variableName + "TempList" : ParserCommonUtils.getVariableNameForLevel(level, "TempList");
 
     // Cannot directly create generic array T[]. Create List first, then convert.
     // 1. Get the JSON Array - Use $T for ClassName

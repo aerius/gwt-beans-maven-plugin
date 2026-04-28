@@ -283,12 +283,7 @@ public class ConfigurationValidator {
     // Check for getters without corresponding fields
     validateGettersWithoutFields(clazz); // This only prints warnings, doesn't set hasErrors
 
-    // Check all fields
-    for (final Field field : clazz.getDeclaredFields()) {
-      if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())) {
-        continue;
-      }
-
+    for (final Field field : ConstructorAnalyzer.getParseableFields(clazz)) {
       if (!validateField(clazz, field, treatErrorsAsWarnings)) {
         classHasIssues = true;
       }

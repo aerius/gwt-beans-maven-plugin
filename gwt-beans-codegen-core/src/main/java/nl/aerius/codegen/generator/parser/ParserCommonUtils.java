@@ -108,6 +108,14 @@ public final class ParserCommonUtils {
   }
 
   /**
+   * Strips type arguments from a source-level type name: {@code "List<String>"} → {@code "List"}.
+   */
+  public static String stripGenerics(final String typeName) {
+    final int genericStart = typeName.indexOf('<');
+    return (genericStart < 0 ? typeName : typeName.substring(0, genericStart)).trim();
+  }
+
+  /**
    * Capitalizes the first letter of a string.
    */
   public static String capitalize(final String str) {
