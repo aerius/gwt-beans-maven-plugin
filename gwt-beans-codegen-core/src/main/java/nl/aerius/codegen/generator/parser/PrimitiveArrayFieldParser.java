@@ -71,7 +71,7 @@ public class PrimitiveArrayFieldParser implements TypeParser {
     Class<?> arrayType = (Class<?>) type;
     Class<?> componentType = arrayType.getComponentType();
     TypeName declarationTypeName = TypeName.get(fieldType);
-    String resultVarName = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Array");
+    String resultVarName = ParserCommonUtils.localVarName(variableName, "", level, "Array");
 
     code.addStatement("$T $L = null", declarationTypeName, resultVarName);
 
@@ -92,8 +92,8 @@ public class PrimitiveArrayFieldParser implements TypeParser {
         return resultVarName;
     }
 
-    String jsonArrayVar = variableName != null ? variableName + "JsonArray" : ParserCommonUtils.getVariableNameForLevel(level, "JsonArray");
-    String listVarName = variableName != null ? variableName + "TempList" : ParserCommonUtils.getVariableNameForLevel(level, "TempList");
+    String jsonArrayVar = ParserCommonUtils.localVarName(variableName, "JsonArray", level, "JsonArray");
+    String listVarName = ParserCommonUtils.localVarName(variableName, "TempList", level, "TempList");
     ClassName jsonArrayHandleName = ParserCommonUtils.getJSONArrayHandle();
     ClassName arrayListName = ClassName.get(java.util.ArrayList.class);
     TypeName wrapperListName = ParameterizedTypeName.get(ClassName.get(java.util.List.class), ClassName.get(wrapperType));

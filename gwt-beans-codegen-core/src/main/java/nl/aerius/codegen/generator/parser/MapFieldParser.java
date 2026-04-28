@@ -90,7 +90,7 @@ public class MapFieldParser implements TypeParser {
       mapImpl = ClassName.get(java.util.LinkedHashMap.class);
     }
 
-    final String mapVar = variableName != null ? variableName : ParserCommonUtils.getVariableNameForLevel(level, "Map");
+    final String mapVar = ParserCommonUtils.localVarName(variableName, "", level, "Map");
     final String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");
     final String keyVar = ParserCommonUtils.getVariableNameForLevel(level, "Key");
 

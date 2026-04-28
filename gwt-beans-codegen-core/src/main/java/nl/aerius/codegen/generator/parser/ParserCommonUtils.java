@@ -126,6 +126,17 @@ public final class ParserCommonUtils {
   }
 
   /**
+   * If {@code variableName} is set, returns {@code variableName + variableAffix};
+   * otherwise falls back to {@link #getVariableNameForLevel}.
+   */
+  public static String localVarName(final String variableName, final String variableAffix,
+      final int fallbackLevel, final String fallbackLevelName) {
+    return variableName != null
+        ? variableName + variableAffix
+        : getVariableNameForLevel(fallbackLevel, fallbackLevelName);
+  }
+
+  /**
    * Generates a variable name based on the nesting level.
    * Level 1 uses the base suffix directly (e.g., "value", "map").
    * Levels > 1 prepend "levelN" (e.g., "level2Value", "level3Map").
