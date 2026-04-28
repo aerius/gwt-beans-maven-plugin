@@ -25,6 +25,7 @@ public class TestRootObjectType {
   private TestConstructorBasedType constructorBased;
   private TestConstructorWithGenericsType constructorWithGenerics;
   private TestConstructorWithIgnoredFieldType constructorWithIgnoredField;
+  private TestRecordType recordType;
 
   public String getFoo() {
     return foo;
@@ -162,6 +163,14 @@ public class TestRootObjectType {
     this.constructorWithIgnoredField = constructorWithIgnoredField;
   }
 
+  public TestRecordType getRecordType() {
+    return recordType;
+  }
+
+  public void setRecordType(TestRecordType recordType) {
+    this.recordType = recordType;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -181,6 +190,7 @@ public class TestRootObjectType {
     obj.setConstructorBased(TestConstructorBasedType.createFullObject());
     obj.setConstructorWithGenerics(TestConstructorWithGenericsType.createFullObject());
     obj.setConstructorWithIgnoredField(TestConstructorWithIgnoredFieldType.createFullObject());
+    obj.setRecordType(TestRecordType.createFullObject());
     return obj;
   }
 

@@ -3,6 +3,7 @@ package nl.aerius.codegen.analyzer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.RecordComponent;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -93,6 +94,12 @@ public class ConstructorAnalyzer {
       return Optional.empty();
     }
 
+    // Records: use the compiler-generated canonical constructor and component names
+    // directly via reflection. No source-file lookup needed.
+    if (clazz.isRecord()) {
+      return buildRecordConstructorInfo(clazz, parseableFields);
+    }
+
     final Set<String> fieldNames = parseableFields.stream()
         .map(Field::getName)
         .collect(Collectors.toSet());
@@ -159,6 +166,25 @@ public class ConstructorAnalyzer {
     }
 
     return Optional.empty();
+  }
+
+  private Optional<ConstructorInfo> buildRecordConstructorInfo(final Class<?> clazz, final List<Field> parseableFields) {
+    final RecordComponent[] components = clazz.getRecordComponents();
+    final List<String> paramNames = Arrays.stream(components)
+        .map(RecordComponent::getName)
+        .collect(Collectors.toList());
+    final Class<?>[] paramTypes = Arrays.stream(components)
+        .map(RecordComponent::getType)
+        .toArray(Class<?>[]::new);
+    try {
+      final Constructor<?> canonical = clazz.getDeclaredConstructor(paramTypes);
+      logger.info("Found canonical record constructor for " + clazz.getName() + " with parameters: " + paramNames);
+      return Optional.of(new ConstructorInfo(canonical, paramNames, parseableFields));
+    } catch (final NoSuchMethodException e) {
+      // Should be impossible: every record has a compiler-generated canonical constructor.
+      logger.warn("Record " + clazz.getName() + " has no canonical constructor: " + e.getMessage());
+      return Optional.empty();
+    }
   }
 
   /**

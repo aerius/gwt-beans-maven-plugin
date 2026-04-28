@@ -40,4 +40,20 @@ class ConstructorAnalyzerTest {
     assertArrayEquals(new Class<?>[] {List.class, Map.class, Set.class},
         info.get().getConstructor().getParameterTypes());
   }
+
+  @Test
+  void testFindMatchingConstructorInfo_forRecord_usesCanonicalConstructor() {
+    // Records resolve via getRecordComponents() and don't need source-file lookup -
+    // construct an analyzer with no source roots to prove the record path skips it.
+    final ConstructorAnalyzer reflectionOnly = new ConstructorAnalyzer(List.of(), new Logger() {});
+    final Optional<ConstructorInfo> info = reflectionOnly.findMatchingConstructorInfo(RecordFixture.class);
+
+    assertTrue(info.isPresent(), "Expected canonical record constructor to be discovered via reflection");
+    assertEquals(List.of("name", "value", "tags"), info.get().getParameterNames());
+    assertArrayEquals(new Class<?>[] {String.class, int.class, List.class},
+        info.get().getConstructor().getParameterTypes());
+  }
+
+  /** Inline record used to assert the record-specific constructor lookup path. */
+  private record RecordFixture(String name, int value, List<String> tags) {}
 }
