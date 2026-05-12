@@ -3,6 +3,7 @@ package nl.aerius.codegen.analyzer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.RecordComponent;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,11 +13,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 
+import nl.aerius.codegen.generator.parser.ParserCommonUtils;
 import nl.aerius.codegen.util.Logger;
 
 /**
@@ -91,6 +94,12 @@ public class ConstructorAnalyzer {
       return Optional.empty();
     }
 
+    // Records: use the compiler-generated canonical constructor and component names
+    // directly via reflection. No source-file lookup needed.
+    if (clazz.isRecord()) {
+      return buildRecordConstructorInfo(clazz, parseableFields);
+    }
+
     final Set<String> fieldNames = parseableFields.stream()
         .map(Field::getName)
         .collect(Collectors.toSet());
@@ -157,6 +166,25 @@ public class ConstructorAnalyzer {
     }
 
     return Optional.empty();
+  }
+
+  private Optional<ConstructorInfo> buildRecordConstructorInfo(final Class<?> clazz, final List<Field> parseableFields) {
+    final RecordComponent[] components = clazz.getRecordComponents();
+    final List<String> paramNames = Arrays.stream(components)
+        .map(RecordComponent::getName)
+        .collect(Collectors.toList());
+    final Class<?>[] paramTypes = Arrays.stream(components)
+        .map(RecordComponent::getType)
+        .toArray(Class<?>[]::new);
+    try {
+      final Constructor<?> canonical = clazz.getDeclaredConstructor(paramTypes);
+      logger.info("Found canonical record constructor for " + clazz.getName() + " with parameters: " + paramNames);
+      return Optional.of(new ConstructorInfo(canonical, paramNames, parseableFields));
+    } catch (final NoSuchMethodException e) {
+      // Should be impossible: every record has a compiler-generated canonical constructor.
+      logger.warn("Record " + clazz.getName() + " has no canonical constructor: " + e.getMessage());
+      return Optional.empty();
+    }
   }
 
   /**
@@ -231,18 +259,25 @@ public class ConstructorAnalyzer {
   }
 
   /**
-   * Gets all fields that should be parsed (non-static, non-transient, non-synthetic).
+   * Canonical predicate for fields that participate in JSON parsing: non-static,
+   * non-transient, non-synthetic, and not {@code @JsonIgnore}. Shared by analyzer,
+   * validator, and generator.
    */
   public static List<Field> getParseableFields(final Class<?> clazz) {
     final List<Field> fields = new ArrayList<>();
     for (final Field field : clazz.getDeclaredFields()) {
-      if (!Modifier.isStatic(field.getModifiers())
-          && !Modifier.isTransient(field.getModifiers())
-          && !field.isSynthetic()) {
+      if (isParseable(field)) {
         fields.add(field);
       }
     }
     return fields;
+  }
+
+  public static boolean isParseable(final Field field) {
+    return !Modifier.isStatic(field.getModifiers())
+        && !Modifier.isTransient(field.getModifiers())
+        && !field.isSynthetic()
+        && !field.isAnnotationPresent(JsonIgnore.class);
   }
 
   /**
@@ -301,11 +336,13 @@ public class ConstructorAnalyzer {
   }
 
   /**
-   * Checks if a source type name matches a reflection type.
+   * Matches a source type name (with generics stripped) against a reflection type, so
+   * {@code List<String>} resolves to raw {@code List} / {@code java.util.List}.
    */
   private boolean typeNamesMatch(final String sourceTypeName, final Class<?> reflectionType) {
-    return sourceTypeName.equals(reflectionType.getName())
-        || sourceTypeName.equals(reflectionType.getSimpleName());
+    final String rawSourceName = ParserCommonUtils.stripGenerics(sourceTypeName);
+    return rawSourceName.equals(reflectionType.getName())
+        || rawSourceName.equals(reflectionType.getSimpleName());
   }
 
   /**

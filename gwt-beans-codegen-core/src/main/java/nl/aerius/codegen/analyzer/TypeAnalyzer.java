@@ -1,7 +1,6 @@
 package nl.aerius.codegen.analyzer;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -160,13 +159,11 @@ public class TypeAnalyzer {
 
     // Always analyze fields, even for types with custom parsers
     // This ensures we discover all types that might need parsers
-    for (final Field field : type.getDeclaredFields()) {
-      if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
-        try {
-          analyzeField(field);
-        } catch (final TypeNotPresentException e) {
-          skippedTypes.add(e.typeName());
-        }
+    for (final Field field : ConstructorAnalyzer.getParseableFields(type)) {
+      try {
+        analyzeField(field);
+      } catch (final TypeNotPresentException e) {
+        skippedTypes.add(e.typeName());
       }
     }
   }

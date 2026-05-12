@@ -56,23 +56,14 @@ public interface TypeParser {
         CodeBlock accessExpression, int level, Type fieldType);
 
     /**
-     * Generates parsing code with a specific variable name override.
-     * Default implementation delegates to the standard method, ignoring the variable name.
-     * Implementations can override this to use the provided variable name.
-     *
-     * @param code The CodeBlock.Builder to add generated code to.
-     * @param type The runtime Type being parsed.
-     * @param objVarName The variable name of the parent JSONObjectHandle.
-     * @param parserPackage The package for generated parsers.
-     * @param accessExpression A CodeBlock representing how to access the raw JSON data.
-     * @param level The current nesting level.
-     * @param fieldType The exact generic type of the original field/setter parameter.
-     * @param variableName The desired variable name for the parsed value, or null for default naming.
-     * @return The name of the variable declared within the generated code block.
+     * Generates parsing code with a variable-name override. Used by the constructor-based path so
+     * each parsed field's local has the field's own name. When {@code variableName} is non-null,
+     * implementations use it as the result variable name and as a prefix for sibling locals
+     * (e.g. {@code names} → {@code namesArray}, {@code namesItem}). When null, fall back to
+     * level-based naming so legacy setter-based output stays byte-identical.
      */
     default String generateParsingCodeInto(CodeBlock.Builder code, Type type, String objVarName, String parserPackage,
         CodeBlock accessExpression, int level, Type fieldType, String variableName) {
-        // Default: ignore variableName and use standard method
         return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType);
     }
 }

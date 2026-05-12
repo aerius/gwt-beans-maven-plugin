@@ -23,24 +23,29 @@ public class CustomObjectFieldParser implements TypeParser {
     // Check if it's a class type first
     if (type instanceof Class<?>) {
       Class<?> clazz = (Class<?>) type;
-        // Handle non-primitive, non-Collection, non-Map, non-array, non-enum types
-        return !clazz.isPrimitive() &&
-            !Collection.class.isAssignableFrom(clazz) &&
-            !Map.class.isAssignableFrom(clazz) &&
-            !clazz.isArray() &&
-            !clazz.isEnum();
-      } else if (type instanceof ParameterizedType) {
-        // Potentially handle complex parameterized types if they aren't Collections or Maps
-        // Example: CustomGeneric<String>, if we had a parser for CustomGeneric
-        Type rawType = ((ParameterizedType) type).getRawType();
-        if (rawType instanceof Class<?>) {
-          Class<?> rawClass = (Class<?>) rawType;
-          return !Collection.class.isAssignableFrom(rawClass) &&
-              !Map.class.isAssignableFrom(rawClass);
-        }
+      // User Map subclasses (e.g. `class FooMap extends HashMap`) fall through to a custom
+      // parser by simple name. JDK Maps are excluded - no `MapParser` exists to dispatch to.
+      return !clazz.isPrimitive() &&
+          !Collection.class.isAssignableFrom(clazz) &&
+          !clazz.isArray() &&
+          !clazz.isEnum() &&
+          !isJdkMap(clazz);
+    } else if (type instanceof ParameterizedType) {
+      // Potentially handle complex parameterized types if they aren't Collections or Maps
+      // Example: CustomGeneric<String>, if we had a parser for CustomGeneric
+      Type rawType = ((ParameterizedType) type).getRawType();
+      if (rawType instanceof Class<?>) {
+        Class<?> rawClass = (Class<?>) rawType;
+        return !Collection.class.isAssignableFrom(rawClass) &&
+            !Map.class.isAssignableFrom(rawClass);
       }
-      // Doesn't handle other types like TypeVariable, WildcardType, GenericArrayType directly
-      return false;
+    }
+    // Doesn't handle other types like TypeVariable, WildcardType, GenericArrayType directly
+    return false;
+  }
+
+  private static boolean isJdkMap(final Class<?> clazz) {
+    return Map.class.isAssignableFrom(clazz) && clazz.getName().startsWith("java.");
   }
 
   @Override

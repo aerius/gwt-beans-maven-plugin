@@ -108,6 +108,14 @@ public final class ParserCommonUtils {
   }
 
   /**
+   * Strips type arguments from a source-level type name: {@code "List<String>"} → {@code "List"}.
+   */
+  public static String stripGenerics(final String typeName) {
+    final int genericStart = typeName.indexOf('<');
+    return (genericStart < 0 ? typeName : typeName.substring(0, genericStart)).trim();
+  }
+
+  /**
    * Capitalizes the first letter of a string.
    */
   public static String capitalize(final String str) {
@@ -115,6 +123,17 @@ public final class ParserCommonUtils {
       return str;
     }
     return Character.toUpperCase(str.charAt(0)) + str.substring(1);
+  }
+
+  /**
+   * If {@code variableName} is set, returns {@code variableName + variableAffix};
+   * otherwise falls back to {@link #getVariableNameForLevel}.
+   */
+  public static String localVarName(final String variableName, final String variableAffix,
+      final int fallbackLevel, final String fallbackLevelName) {
+    return variableName != null
+        ? variableName + variableAffix
+        : getVariableNameForLevel(fallbackLevel, fallbackLevelName);
   }
 
   /**

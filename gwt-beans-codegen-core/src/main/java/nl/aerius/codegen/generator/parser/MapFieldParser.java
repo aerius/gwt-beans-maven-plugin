@@ -57,6 +57,13 @@ public class MapFieldParser implements TypeParser {
   public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
       final CodeBlock accessExpression,
       final int level, final Type fieldType) {
+    return generateParsingCodeInto(code, type, objVarName, parserPackage, accessExpression, level, fieldType, null);
+  }
+
+  @Override
+  public String generateParsingCodeInto(final CodeBlock.Builder code, final Type type, final String objVarName, final String parserPackage,
+      final CodeBlock accessExpression,
+      final int level, final Type fieldType, final String variableName) {
     if (!canHandle(type)) {
       throw new IllegalArgumentException("MapFieldParser cannot handle type: " + type.getTypeName());
     }
@@ -83,7 +90,7 @@ public class MapFieldParser implements TypeParser {
       mapImpl = ClassName.get(java.util.LinkedHashMap.class);
     }
 
-    final String mapVar = ParserCommonUtils.getVariableNameForLevel(level, "Map");
+    final String mapVar = ParserCommonUtils.localVarName(variableName, "", level, "Map");
     final String objVar = ParserCommonUtils.getVariableNameForLevel(level, "Obj");
     final String keyVar = ParserCommonUtils.getVariableNameForLevel(level, "Key");
 

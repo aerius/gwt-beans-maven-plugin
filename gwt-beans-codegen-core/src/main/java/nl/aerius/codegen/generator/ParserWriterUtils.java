@@ -133,10 +133,10 @@ public final class ParserWriterUtils {
 
     if (constructorInfo.isPresent()) {
       // Constructor-based: single parse method that constructs the object
-      typeSpec.addMethod(createConstructorBasedParseMethod(targetClass, parserPackage, classFinder, constructorInfo.get()));
+      typeSpec.addMethod(createConstructorBasedParseMethod(targetClass, parserPackage, constructorInfo.get()));
     } else {
       // Setter-based: existing approach
-      addSetterBasedParseMethods(typeSpec, targetClass, parserPackage, classFinder);
+      addSetterBasedParseMethods(typeSpec, targetClass, parserPackage);
     }
   }
 
@@ -144,13 +144,13 @@ public final class ParserWriterUtils {
    * Adds setter-based parse methods to the type specification.
    */
   private static void addSetterBasedParseMethods(final TypeSpec.Builder typeSpec, final Class<?> targetClass,
-      final String parserPackage, final ClassFinder classFinder) {
+      final String parserPackage) {
     if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
       typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
     } else {
       typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));
     }
-    typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage, classFinder));
+    typeSpec.addMethod(createConfigParseMethod(targetClass, parserPackage));
   }
 
   /**
@@ -248,16 +248,11 @@ public final class ParserWriterUtils {
       }
     }
     // Fallback for complex types - might need refinement
-    String typeName = type.getTypeName();
-    // Basic attempt to get a simple name
-    if (typeName.contains("<")) {
-      typeName = typeName.substring(0, typeName.indexOf('<'));
-    }
+    String typeName = ParserCommonUtils.stripGenerics(type.getTypeName());
     if (typeName.contains(".")) {
       typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
     }
     return determineParserClassName(typeName, parserPackage);
-    // throw new IllegalArgumentException("Cannot determine parser class name for type: " + type.getTypeName());
   }
 
   /**
@@ -376,7 +371,7 @@ public final class ParserWriterUtils {
    * Parses all fields into local variables and then calls the constructor.
    */
   private static MethodSpec createConstructorBasedParseMethod(final Class<?> targetClass, final String parserPackage,
-      final ClassFinder classFinder, final ConstructorInfo constructorInfo) {
+      final ConstructorInfo constructorInfo) {
     final ClassName targetClassName = ClassName.get(targetClass);
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
@@ -439,7 +434,7 @@ public final class ParserWriterUtils {
     return resultVar;
   }
 
-  private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage, final ClassFinder classFinder) {
+  private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage) {
     final ClassName targetClassName = ClassName.get(targetClass);
     final MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("parse")
         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
@@ -458,56 +453,30 @@ public final class ParserWriterUtils {
           .addStatement("$T.parse($L, config)", determineParserClassName(superclass, parserPackage), ParserCommonUtils.BASE_OBJECT_PARAM_NAME);
     }
 
-    // Process all fields
-    for (final Field field : targetClass.getDeclaredFields()) {
-      if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())
-          && !java.lang.reflect.Modifier.isTransient(field.getModifiers())
-          && !field.isSynthetic()) {
+    for (final Field field : ConstructorAnalyzer.getParseableFields(targetClass)) {
+      methodBuilder.addCode("\n");
+      methodBuilder.addComment("Parse $L", field.getName());
+      final boolean requireNonNull = !ParserCommonUtils.isPrimitiveType(field.getGenericType());
+      methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck(
+          ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+          field.getName(),
+          requireNonNull,
+          innerCode -> {
+            final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
+                field.getGenericType(),
+                ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+                CodeBlock.of("$S", field.getName()));
 
-        // ==> INSERT @JsonIgnore CHECK HERE <==
-        try {
-          final Class<? extends java.lang.annotation.Annotation> jsonIgnoreAnnotation = (Class<? extends java.lang.annotation.Annotation>) classFinder
-              .forName("com.fasterxml.jackson.annotation.JsonIgnore");
-          if (field.isAnnotationPresent(jsonIgnoreAnnotation)) {
-            methodBuilder.addCode("\n"); // Add newline for spacing
-            methodBuilder.addComment("Skipping ignored field: $L", field.getName());
-            continue; // Skip processing this ignored field
-          }
-        } catch (final ClassNotFoundException e) {
-          // Log or handle the case where JsonIgnore annotation class is not available on the classpath during generation
-          methodBuilder.addCode("\n");
-          methodBuilder.addComment("WARNING: Cannot check for @JsonIgnore, com.fasterxml.jackson.annotation.JsonIgnore not found.");
-          // Proceed without checking - might generate code for ignored fields if annotation is used but class not found
-        }
-        // ==> END @JsonIgnore CHECK <==
-
-        methodBuilder.addCode("\n");
-        methodBuilder.addComment("Parse $L", field.getName());
-        // Determine if null check is required (true for non-primitives)
-        final boolean requireNonNull = !ParserCommonUtils.isPrimitiveType(field.getGenericType());
-        methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck(
-            ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
-            field.getName(),
-            requireNonNull, // Pass determined value
-            innerCode -> {
-              // Pass CodeBlock representing the field name string literal
-              final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
-                  field.getGenericType(),
-                  ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
-                  CodeBlock.of("$S", field.getName()));
-
-              final String resultVar = dispatchGenerateParsingCodeInto(
-                  innerCode,
-                  field.getGenericType(),
-                  ParserCommonUtils.BASE_OBJECT_PARAM_NAME, // Use constant here
-                  parserPackage,
-                  fieldAccess, // Pass the code to access the field's data
-                  1, // Start top-level fields at level 1 - Remove last arg
-                  field.getGenericType() // Pass fieldType
-              );
-              innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
-            }));
-      }
+            final String resultVar = dispatchGenerateParsingCodeInto(
+                innerCode,
+                field.getGenericType(),
+                ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+                parserPackage,
+                fieldAccess,
+                1,
+                field.getGenericType());
+            innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
+          }));
     }
 
     return methodBuilder.build();

@@ -283,12 +283,7 @@ public class ConfigurationValidator {
     // Check for getters without corresponding fields
     validateGettersWithoutFields(clazz); // This only prints warnings, doesn't set hasErrors
 
-    // Check all fields
-    for (final Field field : clazz.getDeclaredFields()) {
-      if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())) {
-        continue;
-      }
-
+    for (final Field field : ConstructorAnalyzer.getParseableFields(clazz)) {
       if (!validateField(clazz, field, treatErrorsAsWarnings)) {
         classHasIssues = true;
       }
@@ -424,6 +419,11 @@ public class ConfigurationValidator {
 
   private boolean validateGetterSetter(final Class<?> clazz, final Field field, final boolean treatErrorsAsWarnings,
       final boolean isConstructorBasedType) {
+    // Records use bare componentName() accessors (not getX()/isX()) and have no setters
+    // by definition; the getter/setter shape check does not apply.
+    if (clazz.isRecord()) {
+      return true;
+    }
     final String fieldName = field.getName();
     final String capitalizedName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
     boolean isValid = true;

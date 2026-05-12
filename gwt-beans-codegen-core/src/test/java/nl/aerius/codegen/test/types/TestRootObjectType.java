@@ -23,6 +23,9 @@ public class TestRootObjectType {
   private TestPolyBase testPolyBase;
   private TestPrimitiveArrayType primitiveArrays;
   private TestConstructorBasedType constructorBased;
+  private TestConstructorWithGenericsType constructorWithGenerics;
+  private TestConstructorWithIgnoredFieldType constructorWithIgnoredField;
+  private TestRecordType recordType;
 
   public String getFoo() {
     return foo;
@@ -144,6 +147,30 @@ public class TestRootObjectType {
     this.constructorBased = constructorBased;
   }
 
+  public TestConstructorWithGenericsType getConstructorWithGenerics() {
+    return constructorWithGenerics;
+  }
+
+  public void setConstructorWithGenerics(TestConstructorWithGenericsType constructorWithGenerics) {
+    this.constructorWithGenerics = constructorWithGenerics;
+  }
+
+  public TestConstructorWithIgnoredFieldType getConstructorWithIgnoredField() {
+    return constructorWithIgnoredField;
+  }
+
+  public void setConstructorWithIgnoredField(TestConstructorWithIgnoredFieldType constructorWithIgnoredField) {
+    this.constructorWithIgnoredField = constructorWithIgnoredField;
+  }
+
+  public TestRecordType getRecordType() {
+    return recordType;
+  }
+
+  public void setRecordType(TestRecordType recordType) {
+    this.recordType = recordType;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -161,6 +188,9 @@ public class TestRootObjectType {
     obj.setTestPolyBase(new TestPolySubA("BaseValueA", 123));
     obj.setPrimitiveArrays(TestPrimitiveArrayType.createFullObject());
     obj.setConstructorBased(TestConstructorBasedType.createFullObject());
+    obj.setConstructorWithGenerics(TestConstructorWithGenericsType.createFullObject());
+    obj.setConstructorWithIgnoredField(TestConstructorWithIgnoredFieldType.createFullObject());
+    obj.setRecordType(TestRecordType.createFullObject());
     return obj;
   }
 
