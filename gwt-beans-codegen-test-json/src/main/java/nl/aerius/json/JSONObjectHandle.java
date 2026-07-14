@@ -1,13 +1,13 @@
 package nl.aerius.json;
 
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Test implementation of JSONObjectHandle that uses Jackson's JsonNode.
@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * JSONObjectHandle class.
  */
 public class JSONObjectHandle {
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final JsonMapper MAPPER = JsonMapper.builder().build();
   private final JsonNode inner;
 
   public JSONObjectHandle(final JsonNode inner) {
@@ -30,7 +30,7 @@ public class JSONObjectHandle {
     if (isNull(key)) {
       return null;
     }
-    JSONObjectHandle obj = getValue(key).isObject();
+    final JSONObjectHandle obj = getValue(key).isObject();
     if (obj == null) {
       throw new IllegalStateException(
           "Wrongly assumed json value to be Object while it was not: [" + key + "] in " + inner);
@@ -47,11 +47,11 @@ public class JSONObjectHandle {
   }
 
   public String getString(final String key) {
-    JSONValue value = getValue(key);
+    final JSONValue value = getValue(key);
     if (value.isNull()) {
       return null;
     }
-    JSONString string = value.isString();
+    final JSONString string = value.isString();
     if (string == null) {
       throw new IllegalStateException(
           "Wrongly assumed json value to be String while it was not: [" + key + "] in " + inner);
@@ -94,7 +94,7 @@ public class JSONObjectHandle {
   }
 
   public JSONArrayHandle getArray(final String key) {
-    JSONArrayHandle array = getValue(key).isArray();
+    final JSONArrayHandle array = getValue(key).isArray();
     if (array == null) {
       throw new IllegalStateException(
           "Wrongly assumed json value to be an array while it was not: [" + key + "] in " + inner);
@@ -111,11 +111,11 @@ public class JSONObjectHandle {
   }
 
   public Double getNumber(final String key) {
-    JSONValue value = getValue(key);
+    final JSONValue value = getValue(key);
     if (value.isNull()) {
       return 0.0;
     }
-    JSONNumber number = value.isNumber();
+    final JSONNumber number = value.isNumber();
     if (number == null) {
       throw new IllegalStateException(
           "Wrongly assumed json value to be Number while it was not: [" + key + "] in " + inner);
@@ -133,10 +133,8 @@ public class JSONObjectHandle {
 
   public Set<String> keySet() {
     if (inner.isObject()) {
-      Iterator<String> fieldNames = inner.fieldNames();
-      Set<String> keys = new java.util.HashSet<>();
-      fieldNames.forEachRemaining(keys::add);
-      return keys;
+      final Collection<String> fieldNames = inner.propertyNames();
+      return new java.util.HashSet<>(fieldNames);
     }
     return Set.of();
   }
@@ -150,7 +148,7 @@ public class JSONObjectHandle {
   }
 
   public boolean getBoolean(final String key) {
-    JSONBoolean bool = getValue(key).isBoolean();
+    final JSONBoolean bool = getValue(key).isBoolean();
     if (bool == null) {
       throw new IllegalStateException(
           "Wrongly assumed json value to be Boolean while it was not: [" + key + "] in " + inner);
@@ -200,9 +198,9 @@ public class JSONObjectHandle {
 
   public static JSONObjectHandle fromText(final String text) {
     try {
-      JsonNode node = MAPPER.readTree(text);
+      final JsonNode node = MAPPER.readTree(text);
       return new JSONObjectHandle(node);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException("Failed to parse JSON: " + text, e);
     }
   }
@@ -212,9 +210,9 @@ public class JSONObjectHandle {
   }
 
   public String asString() {
-    if (!inner.isTextual()) {
+    if (!inner.isString()) {
       throw new IllegalStateException("Cannot convert non-string value to string");
     }
-    return inner.asText();
+    return inner.asString();
   }
 }

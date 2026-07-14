@@ -25,11 +25,10 @@
   <parent>
     <groupId>nl.aerius</groupId>
     <artifactId>aerius-root-pom</artifactId>
-    <version>1.2.0</version>
+    <version>1.4.0-SNAPSHOT</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
-  <groupId>nl.aerius</groupId>
   <artifactId>gwt-beans-codegen</artifactId>
   <version>1.3.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -45,7 +44,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jackson.version>2.18.8</jackson.version>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
   </properties>
@@ -58,16 +56,6 @@
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-annotations</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
       <!-- Internal module dependencies -->
       <dependency>
         <groupId>nl.aerius</groupId>
@@ -76,17 +64,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <distributionManagement>
-    <repository>
-      <id>aerius-nexus</id>
-      <url>https://nexus.aerius.nl/repository/maven-releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>aerius-nexus</id>
-      <url>https://nexus.aerius.nl/repository/maven-snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
 
   <repositories>
     <repository>
@@ -108,16 +85,4 @@
       </snapshots>
     </pluginRepository>
   </pluginRepositories>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.11.0</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
 </project>

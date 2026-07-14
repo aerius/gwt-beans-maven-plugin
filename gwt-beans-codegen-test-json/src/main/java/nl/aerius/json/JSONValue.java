@@ -1,6 +1,6 @@
 package nl.aerius.json;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 public class JSONValue {
   private final JsonNode inner;
@@ -18,11 +18,11 @@ public class JSONValue {
   }
 
   public JSONArrayHandle isArray() {
-    return inner.isArray() ? new JSONArrayHandle((com.fasterxml.jackson.databind.node.ArrayNode) inner) : null;
+    return inner.isArray() ? new JSONArrayHandle((tools.jackson.databind.node.ArrayNode) inner) : null;
   }
 
   public JSONString isString() {
-    return inner.isTextual() ? new JSONString(inner.asText()) : null;
+    return inner.isString() ? new JSONString(inner.asString()) : null;
   }
 
   public JSONNumber isNumber() {
@@ -41,7 +41,7 @@ public class JSONValue {
 class JSONString {
   private final String value;
 
-  public JSONString(String value) {
+  public JSONString(final String value) {
     this.value = value;
   }
 
@@ -53,7 +53,7 @@ class JSONString {
 class JSONNumber {
   private final double value;
 
-  public JSONNumber(double value) {
+  public JSONNumber(final double value) {
     this.value = value;
   }
 
@@ -65,7 +65,7 @@ class JSONNumber {
 class JSONBoolean {
   private final boolean value;
 
-  public JSONBoolean(boolean value) {
+  public JSONBoolean(final boolean value) {
     this.value = value;
   }
 

@@ -1,6 +1,6 @@
 package nl.aerius.json;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 public class JSONValueHandle {
   private final JsonNode inner;
@@ -18,7 +18,7 @@ public class JSONValueHandle {
   }
 
   public boolean isString() {
-    return inner.isTextual();
+    return inner.isString();
   }
 
   public boolean isNumber() {

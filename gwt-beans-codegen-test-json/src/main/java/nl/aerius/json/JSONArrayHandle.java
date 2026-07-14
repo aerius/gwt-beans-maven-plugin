@@ -2,10 +2,12 @@ package nl.aerius.json;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.IntConsumer;
+import java.util.function.ObjIntConsumer;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ArrayNode;
 
 public class JSONArrayHandle {
   private final ArrayNode inner;
@@ -20,32 +22,32 @@ public class JSONArrayHandle {
     }
   }
 
-  public void forEachString(Consumer<String> consumer) {
+  public void forEachString(final Consumer<String> consumer) {
     for (int i = 0; i < inner.size(); i++) {
-      consumer.accept(inner.get(i).asText());
+      consumer.accept(inner.get(i).asString());
     }
   }
 
-  public void forEachNumber(Consumer<Double> consumer) {
+  public void forEachNumber(final DoubleConsumer consumer) {
     for (int i = 0; i < inner.size(); i++) {
       consumer.accept(inner.get(i).asDouble());
     }
   }
 
-  public void forEachInteger(Consumer<Integer> consumer) {
+  public void forEachInteger(final IntConsumer consumer) {
     for (int i = 0; i < inner.size(); i++) {
       consumer.accept(inner.get(i).asInt());
     }
   }
 
-  public void forEachWithIndex(BiConsumer<JSONObjectHandle, Integer> consumer) {
+  public void forEachWithIndex(final ObjIntConsumer<JSONObjectHandle> consumer) {
     for (int i = 0; i < inner.size(); i++) {
       consumer.accept(new JSONObjectHandle(inner.get(i)), i);
     }
   }
 
   public List<JSONObjectHandle> toList() {
-    List<JSONObjectHandle> result = new ArrayList<>();
+    final List<JSONObjectHandle> result = new ArrayList<>();
     for (int i = 0; i < inner.size(); i++) {
       result.add(new JSONObjectHandle(inner.get(i)));
     }

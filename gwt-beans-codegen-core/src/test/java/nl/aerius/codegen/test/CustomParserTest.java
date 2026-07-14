@@ -59,7 +59,7 @@ class CustomParserTest extends AbstractRoundTripTest {
     TestRootObjectType original = TestRootObjectType.createFullObject();
 
     // Serialize to JSON
-    String originalJson = objectMapper.writeValueAsString(original);
+    String originalJson = jsonMapper.writeValueAsString(original);
     System.out.println("Serialized JSON: " + originalJson);
 
     // Parse using our parser

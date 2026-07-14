@@ -20,18 +20,18 @@ import javax.tools.ToolProvider;
 
 import org.junit.jupiter.api.BeforeEach;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
-  protected ObjectMapper objectMapper;
+  protected JsonMapper jsonMapper;
   protected File outputDir;
   protected File customDir;
   protected static final String PARSER_PACKAGE = "nl.aerius.codegen.test.generated";
 
   @BeforeEach
   void setupMapper() throws IOException {
-    objectMapper = new ObjectMapper();
+    jsonMapper = JsonMapper.builder().build();
     outputDir = new File("src/test/resources/parsers/generated");
 
     // Clean the output directory
@@ -156,7 +156,7 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
    */
   protected void assertRoundTrip(final Object original, final Class<?> parserClass) throws Exception {
     // Serialize original object to JSON
-    final String originalJson = objectMapper.writeValueAsString(original);
+    final String originalJson = jsonMapper.writeValueAsString(original);
     System.out.println("Original JSON: " + originalJson);
 
     // Find the parse method that takes a String
@@ -166,12 +166,12 @@ public abstract class AbstractRoundTripTest extends ParserGeneratorTestBase {
     final Object parsed = parseMethod.invoke(null, originalJson);
 
     // Serialize the parsed object back to JSON
-    final String parsedJson = objectMapper.writeValueAsString(parsed);
+    final String parsedJson = jsonMapper.writeValueAsString(parsed);
     System.out.println("  Parsed JSON: " + parsedJson);
 
     // Compare the JSON trees to ignore formatting differences
-    final JsonNode originalTree = objectMapper.readTree(originalJson);
-    final JsonNode parsedTree = objectMapper.readTree(parsedJson);
+    final JsonNode originalTree = jsonMapper.readTree(originalJson);
+    final JsonNode parsedTree = jsonMapper.readTree(parsedJson);
 
     assertEquals(
         originalTree,
