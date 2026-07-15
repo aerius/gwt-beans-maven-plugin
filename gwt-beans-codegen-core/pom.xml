@@ -22,8 +22,6 @@
     <jsinterop-annotations.version>2.0.0</jsinterop-annotations.version>
     
     <compile-testing.version>0.23.0</compile-testing.version>
-    
-    <exec-maven-plugin.version>3.6.3</exec-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -89,7 +87,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>${exec-maven-plugin.version}</version>
         <configuration>
           <mainClass>nl.aerius.codegen.ParserGenerator</mainClass>
         </configuration>
